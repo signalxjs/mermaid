@@ -111,10 +111,55 @@ clientImports: ['./src/mermaid-config', '@sigx/mermaid/client'];
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `themes` | `{ light: 'default', dark: 'dark' }` | mermaid theme per colour scheme. |
+| `themes` | `{ light: 'default', dark: 'dark' }` | Appearance per colour scheme — see below. |
 | `securityLevel` | `'strict'` | Passed to mermaid. Raising it lets diagrams emit raw HTML and click handlers. |
-| `config` | `{}` | Shallow-merged into `mermaid.initialize()`. |
+| `config` | `{}` | Merged into `mermaid.initialize()`. `themeVariables` merges rather than replaces. |
 | `resolveColorScheme` | — | Override colour-scheme detection entirely. |
+
+### Matching your site's colours
+
+Each scheme takes either a mermaid theme name or `{ theme, variables }`, so
+light and dark can carry different palettes:
+
+```ts
+configureMermaid({
+    themes: {
+        light: { theme: 'base', variables: { primaryColor: '#f6f8fa', lineColor: '#d1d9e0' } },
+        dark: { theme: 'base', variables: { primaryColor: '#161b22', lineColor: '#3d444d' } },
+    },
+});
+```
+
+Pair `variables` with **`theme: 'base'`** — `base` is the theme mermaid intends
+to be recoloured; the others largely ignore overrides.
+
+`variables` may be a **function**, evaluated at render time rather than at
+config time. That is how you drive diagrams from CSS custom properties, so they
+track a daisyUI or Tailwind theme swap without you restating the palette:
+
+```ts
+const cssVar = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const fromTokens = () => ({
+    background: cssVar('--b1'),
+    primaryColor: cssVar('--b2'),
+    primaryTextColor: cssVar('--bc'),
+    lineColor: cssVar('--bc'),
+    // mermaid leaves this a light grey in every theme, which reads as a
+    // highlighter smear over a dark diagram.
+    edgeLabelBackground: cssVar('--b1'),
+});
+
+configureMermaid({
+    themes: { light: { theme: 'base', variables: fromTokens }, dark: { theme: 'base', variables: fromTokens } },
+});
+```
+
+A working version of this is in [`examples/basic`](../../examples/basic/src/mermaid-config.ts).
+
+Precedence, lowest first: global `config` → per-call `options.config` → the
+active scheme's `variables`. `themeVariables` merges at each step, so overriding
+one colour keeps the rest.
 
 ### Theme detection
 
@@ -141,8 +186,17 @@ If your page is dark in a way none of these can see, say so directly:
 configureMermaid({ resolveColorScheme: () => (myStore.dark ? 'dark' : 'light') });
 ```
 
-When the resolved theme changes, already-rendered diagrams re-render. Diagrams
-that haven't drawn yet simply pick up the new theme when they do.
+When the resolved appearance changes, already-rendered diagrams re-render.
+Diagrams that haven't drawn yet simply pick up the new theme when they do.
+
+"Changes" means the colour scheme, the theme name, *or* the resolved
+`variables` — all three, because with per-scheme variables both schemes usually
+name `base`, and a daisyUI swap between two light themes changes neither the
+scheme nor the name while changing every colour.
+
+The watcher fires on `data-theme` / `class` / `style` mutations on `<html>` and
+on `prefers-color-scheme`. A theme delivered purely by swapping a stylesheet is
+not observable — call `renderDiagram` again, or toggle an attribute.
 
 ## Styling
 
@@ -196,9 +250,12 @@ dependency is a plausible future addition.
 ```ts
 // @sigx/mermaid
 export { Mermaid, type MermaidProps };
-export { configureMermaid, getMermaidConfig, resetMermaidConfig };
-export { loadMermaid, renderDiagram, resolveColorScheme, resolveTheme, watchTheme };
-export type { MermaidOptions, MermaidThemeName, MermaidThemes, RenderResult };
+export { configureMermaid, getMermaidConfig, resetMermaidConfig, mergeMermaidConfig };
+export { loadMermaid, renderDiagram, resolveColorScheme, resolveTheme, resolveSchemeTheme, watchTheme };
+export type {
+    MermaidOptions, MermaidSchemeTheme, MermaidThemeName, MermaidThemes,
+    MermaidThemeVariables, RenderResult,
+};
 
 // @sigx/mermaid/client   — installs on import
 export { installMermaid, uninstallMermaid, type MermaidClientOptions };

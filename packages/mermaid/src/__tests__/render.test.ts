@@ -1,6 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { configureMermaid, resetMermaidConfig } from '../config';
-import { resolveColorScheme, resolveTheme, watchTheme, resetMermaidLoader } from '../render';
+import {
+    configureMermaid,
+    getMermaidConfig,
+    mergeMermaidConfig,
+    resetMermaidConfig,
+    resolveThemeVariables,
+} from '../config';
+import {
+    resolveColorScheme,
+    resolveSchemeTheme,
+    resolveTheme,
+    watchTheme,
+    resetMermaidLoader,
+} from '../render';
 
 function setComputedColorScheme(value: string | null): void {
     // happy-dom resolves `color-scheme` from the inline style, which is exactly
@@ -185,6 +197,40 @@ describe('watchTheme', () => {
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
+    it('fires on a light/dark flip even when both schemes name the same theme', async () => {
+        // Regression, caught in a real browser: per-scheme variables are
+        // normally written with `theme: 'base'` on both sides, so comparing
+        // theme names alone saw no change and the diagram kept the old palette.
+        configureMermaid({
+            themes: {
+                light: { theme: 'base', variables: { primaryColor: '#fff' } },
+                dark: { theme: 'base', variables: { primaryColor: '#000' } },
+            },
+        });
+        const onChange = vi.fn();
+        dispose = watchTheme(onChange);
+
+        document.documentElement.setAttribute('data-theme', 'dark');
+        await settle();
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires when a `variables` function starts returning different colours', async () => {
+        // A daisyUI swap between two *light* themes: same scheme, same mermaid
+        // theme, different CSS custom properties.
+        let colour = '#111';
+        configureMermaid({ themes: { light: { theme: 'base', variables: () => ({ primaryColor: colour }) } } });
+        const onChange = vi.fn();
+        dispose = watchTheme(onChange);
+
+        colour = '#222';
+        document.documentElement.setAttribute('data-theme', 'garden');
+        await settle();
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
     it('stops firing once disposed', async () => {
         const onChange = vi.fn();
         dispose = watchTheme(onChange);
@@ -195,5 +241,75 @@ describe('watchTheme', () => {
         await settle();
 
         expect(onChange).not.toHaveBeenCalled();
+    });
+});
+
+describe('theme variables', () => {
+    beforeEach(() => {
+        resetMermaidConfig();
+        document.documentElement.removeAttribute('data-theme');
+        document.documentElement.className = '';
+        document.documentElement.style.removeProperty('background-color');
+        document.body.style.removeProperty('background-color');
+        setComputedColorScheme(null);
+    });
+
+    it('accepts the string shorthand and the object form side by side', () => {
+        configureMermaid({
+            themes: { light: 'neutral', dark: { theme: 'base', variables: { primaryColor: '#000' } } },
+        });
+
+        expect(resolveSchemeTheme()).toEqual({ theme: 'neutral' });
+
+        document.documentElement.setAttribute('data-theme', 'dark');
+        expect(resolveSchemeTheme()).toEqual({ theme: 'base', variables: { primaryColor: '#000' } });
+    });
+
+    it('evaluates a `variables` function at resolve time, not at config time', () => {
+        let colour = '#111';
+        configureMermaid({ themes: { light: { theme: 'base', variables: () => ({ primaryColor: colour }) } } });
+
+        expect(resolveThemeVariables(resolveSchemeTheme())).toEqual({ primaryColor: '#111' });
+
+        // The point of the function form: a CSS custom property or a store can
+        // change after configuration and the next render must see it.
+        colour = '#222';
+        expect(resolveThemeVariables(resolveSchemeTheme())).toEqual({ primaryColor: '#222' });
+    });
+
+    it('resolveTheme still reports just the theme name', () => {
+        configureMermaid({ themes: { light: { theme: 'base', variables: { primaryColor: '#000' } } } });
+        expect(resolveTheme()).toBe('base');
+    });
+});
+
+describe('mergeMermaidConfig', () => {
+    it('merges themeVariables instead of replacing them', () => {
+        // Two modules each contributing a slice of the palette must not
+        // silently erase each other.
+        const merged = mergeMermaidConfig(
+            { themeVariables: { primaryColor: '#111', lineColor: '#222' }, fontFamily: 'serif' },
+            { themeVariables: { lineColor: '#333' } }
+        );
+
+        expect(merged).toEqual({
+            themeVariables: { primaryColor: '#111', lineColor: '#333' },
+            fontFamily: 'serif',
+        });
+    });
+
+    it('survives either side being absent', () => {
+        expect(mergeMermaidConfig(undefined, { a: 1 })).toEqual({ a: 1 });
+        expect(mergeMermaidConfig({ a: 1 }, undefined)).toEqual({ a: 1 });
+        expect(mergeMermaidConfig(undefined, undefined)).toEqual({});
+    });
+
+    it('accumulates across repeated configureMermaid calls', () => {
+        configureMermaid({ config: { themeVariables: { primaryColor: '#111' } } });
+        configureMermaid({ config: { themeVariables: { lineColor: '#222' } } });
+
+        expect(getMermaidConfig().config).toEqual({
+            themeVariables: { primaryColor: '#111', lineColor: '#222' },
+        });
     });
 });

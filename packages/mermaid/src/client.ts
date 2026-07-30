@@ -25,7 +25,12 @@ import { configureMermaid, getMermaidConfig, type MermaidOptions } from './confi
 import { renderDiagram, watchTheme } from './render';
 
 export interface MermaidClientOptions {
-    /** Where to look for diagrams. @default document */
+    /**
+     * Where to look for diagrams — both for the initial scan and for the
+     * observer that catches diagrams added later. Diagrams outside it are left
+     * alone. Defaults to the whole document, in which case the observer
+     * narrows to `#app` (falling back to `<body>`).
+     */
     root?: ParentNode;
     /**
      * How far outside the viewport to start rendering.
@@ -205,7 +210,14 @@ export function installMermaid(options: MermaidClientOptions = {}): () => void {
     // Batched into a frame and re-scanning wholesale, because a patch arrives
     // as a burst of small mutations and per-record work would repeat the same
     // query dozens of times. `claimed` + `lastRequested` make it idempotent.
-    const appRoot = (root instanceof Document ? root : document).querySelector('#app') ?? document.body;
+    // An explicit non-document `root` is a scoping instruction: observe exactly
+    // it, or the enhancer would happily claim diagrams elsewhere on the page
+    // that the caller meant to keep out. Only the default document root falls
+    // back to hunting for #app.
+    const observeRoot =
+        root instanceof Document
+            ? (root.querySelector('#app') ?? root.body)
+            : (root as Element | DocumentFragment);
     let scanScheduled = 0;
     const mo = new MutationObserver(() => {
         if (scanScheduled) return;
@@ -214,7 +226,7 @@ export function installMermaid(options: MermaidClientOptions = {}): () => void {
             scan();
         });
     });
-    if (appRoot) mo.observe(appRoot, { childList: true, subtree: true, characterData: true });
+    if (observeRoot) mo.observe(observeRoot, { childList: true, subtree: true, characterData: true });
 
     // --- Theme changes ----------------------------------------------------
     // Re-render everything already on screen when the palette flips.

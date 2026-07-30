@@ -6,21 +6,58 @@
 :root {
     color-scheme: light;
     --bg: #ffffff;
+    --surface: #f6f8fa;
     --fg: #1f2328;
     --muted: #59636e;
     --border: #d1d9e0;
     --accent: #0969da;
 }
 
+/* Follow the OS by default… */
 @media (prefers-color-scheme: dark) {
     :root {
         color-scheme: dark;
         --bg: #0d1117;
+        --surface: #161b22;
         --fg: #e6edf3;
         --muted: #9198a1;
         --border: #3d444d;
         --accent: #4493f8;
     }
+}
+
+/* …but let an explicit `data-theme` win, in either direction. This is the
+   daisyUI convention, and it is what @sigx/mermaid's detection reads first. */
+:root[data-theme='light'] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #f6f8fa;
+    --fg: #1f2328;
+    --muted: #59636e;
+    --border: #d1d9e0;
+    --accent: #0969da;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #0d1117;
+    --surface: #161b22;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --accent: #4493f8;
+}
+
+.theme-toggle {
+    float: right;
+    padding: 0.25rem 0.75rem;
+    font: inherit;
+    font-size: 0.875rem;
+    color: var(--fg);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    cursor: pointer;
 }
 
 html {

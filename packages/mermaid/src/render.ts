@@ -8,7 +8,15 @@
  * server-side DOM shim implements faithfully.
  */
 
-import { getMermaidConfig, type MermaidOptions, type MermaidThemes } from './config';
+import {
+    getMermaidConfig,
+    mergeMermaidConfig,
+    resolveThemeVariables,
+    toSchemeTheme,
+    type MermaidOptions,
+    type MermaidSchemeTheme,
+    type MermaidThemes,
+} from './config';
 
 /** The slice of mermaid's API this package uses. */
 interface MermaidApi {
@@ -110,21 +118,55 @@ export function resolveColorScheme(options?: MermaidOptions): 'light' | 'dark' {
     return 'light';
 }
 
-/** The mermaid theme name for the page's current colour scheme. */
-export function resolveTheme(options?: MermaidOptions): string {
+/** The appearance configured for the page's current colour scheme. */
+export function resolveSchemeTheme(options?: MermaidOptions): MermaidSchemeTheme {
     // `getMermaidConfig().themes` is always complete; a per-call override may
     // name only one scheme.
     const themes: MermaidThemes = { ...getMermaidConfig().themes, ...options?.themes };
-    return resolveColorScheme(options) === 'dark' ? themes.dark : themes.light;
+    return toSchemeTheme(resolveColorScheme(options) === 'dark' ? themes.dark : themes.light);
+}
+
+/** The mermaid theme *name* for the page's current colour scheme. */
+export function resolveTheme(options?: MermaidOptions): string {
+    return resolveSchemeTheme(options).theme;
 }
 
 /**
- * Call `onChange` whenever the resolved mermaid theme changes — a daisyUI
+ * Everything that decides how a diagram looks, flattened to a comparable
+ * string. `watchTheme` re-renders when this changes.
+ *
+ * All three parts are needed, and the naive versions are each wrong:
+ *
+ * - **theme name alone** misses the common case entirely. Per-scheme variables
+ *   are normally written as `{ light: { theme: 'base', … }, dark: { theme:
+ *   'base', … } }` — same name in both schemes — so a light/dark flip would
+ *   look like no change at all.
+ * - **name + scheme** still misses a palette swap *within* a scheme: two light
+ *   daisyUI themes resolve to the same scheme and the same mermaid theme, but
+ *   `variables` reading CSS custom properties returns different colours.
+ *
+ * So the variables are resolved too. That means calling the `variables`
+ * function on each batched mutation, which is a `getComputedStyle` read or
+ * two — cheap, and it only happens once per frame at most.
+ */
+function themeSignature(): string {
+    const scheme = resolveSchemeTheme();
+    let variables = '';
+    try {
+        variables = JSON.stringify(resolveThemeVariables(scheme));
+    } catch {
+        /* a throwing resolver shouldn't wedge the watcher */
+    }
+    return `${resolveColorScheme()}|${scheme.theme}|${variables}`;
+}
+
+/**
+ * Call `onChange` whenever the page's diagram appearance changes — a daisyUI
  * `data-theme` flip, a Tailwind `.dark` toggle, or the OS switching schemes.
  *
- * Coalesced into one animation frame (a theme toggle typically rewrites
- * several attributes) and filtered on the *resolved* theme, so switching
- * between two light daisyUI themes doesn't re-render every diagram for nothing.
+ * Coalesced into one animation frame, since a theme toggle typically rewrites
+ * several attributes at once, and filtered on `themeSignature()` so a mutation
+ * that changes nothing a diagram can see costs nothing.
  *
  * Returns a disposer.
  */
@@ -132,16 +174,16 @@ export function watchTheme(onChange: (theme: string) => void): () => void {
     if (typeof document === 'undefined') return () => {};
 
     let pending = 0;
-    let last = resolveTheme();
+    let last = themeSignature();
 
     const check = (): void => {
         if (pending) return;
         pending = requestAnimationFrame(() => {
             pending = 0;
-            const theme = resolveTheme();
-            if (theme === last) return;
-            last = theme;
-            onChange(theme);
+            const signature = themeSignature();
+            if (signature === last) return;
+            last = signature;
+            onChange(resolveTheme());
         });
     };
 
@@ -186,13 +228,22 @@ export function renderDiagram(source: string, options?: MermaidOptions): Promise
     const run = async (): Promise<RenderResult> => {
         const mermaid = await loadMermaid();
         const opts = getMermaidConfig();
+        const scheme = resolveSchemeTheme(options);
+
+        // Config precedence, lowest first: global `config`, per-call `config`,
+        // then the active scheme's `variables` — the most specific statement of
+        // "this is what the diagram should look like right now" wins. Variables
+        // merge at every step instead of replacing (mergeMermaidConfig), so a
+        // scheme that overrides one colour keeps the rest.
+        const config = mergeMermaidConfig(mergeMermaidConfig(opts.config, options?.config), {
+            themeVariables: resolveThemeVariables(scheme),
+        });
 
         mermaid.initialize({
             startOnLoad: false,
             securityLevel: options?.securityLevel ?? opts.securityLevel,
-            theme: resolveTheme(options),
-            ...opts.config,
-            ...options?.config,
+            theme: scheme.theme,
+            ...config,
         });
 
         const id = `sigx-mermaid-${++seq}`;

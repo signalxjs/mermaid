@@ -299,6 +299,25 @@ describe('installMermaid', () => {
         expect(initialize).toHaveBeenCalledWith(expect.objectContaining({ securityLevel: 'strict' }));
     });
 
+    it('confines itself to an explicit root, initially and on later mutations', async () => {
+        document.body.innerHTML = `<div id="app"><div id="inside"></div><div id="outside"></div></div>`;
+        const inside = document.querySelector<HTMLElement>('#inside')!;
+        const outside = document.querySelector<HTMLElement>('#outside')!;
+
+        installMermaid({ root: inside });
+        await settle();
+
+        // A diagram added outside the given root is not the caller's problem.
+        outside.innerHTML = FIGURE;
+        await settle();
+        expect(render).not.toHaveBeenCalled();
+
+        inside.innerHTML = FIGURE;
+        await settle();
+        expect(render).toHaveBeenCalledTimes(1);
+        expect(outside.querySelector('.sigx-mermaid-output')).toBeNull();
+    });
+
     it('stops responding once disposed', async () => {
         document.body.innerHTML = `<div id="app"></div>`;
         const dispose = installMermaid();

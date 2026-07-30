@@ -33,9 +33,16 @@ const packagesDir = join(rootDir, 'packages');
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
-const provenance= args.includes('--provenance') || process.env.NPM_CONFIG_PROVENANCE === 'true';
+const provenance = args.includes('--provenance') || process.env.NPM_CONFIG_PROVENANCE === 'true';
 const tagIndex = args.indexOf('--tag');
-const tag = tagIndex !== -1 ? args[tagIndex + 1] : null;
+const tagValue = tagIndex !== -1 ? args[tagIndex + 1] : undefined;
+// `--tag` with nothing after it (end of argv, or another flag) would otherwise
+// reach npm as `--tag undefined` and publish under a dist-tag of that name.
+if (tagIndex !== -1 && (tagValue === undefined || tagValue.startsWith('--'))) {
+    console.error('❌ --tag requires a value, e.g. --tag beta');
+    process.exit(1);
+}
+const tag = tagValue ?? null;
 
 const NPM_TOKEN = process.env.NPM_TOKEN;
 const npmrcPath = join(homedir(), '.npmrc');

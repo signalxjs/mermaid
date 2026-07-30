@@ -32,5 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   OS put mermaid's dark theme (black nodes) on a white page.
 - `configureMermaid()` for global themes, `securityLevel` (default `'strict'`)
   and arbitrary mermaid config.
+- Per-scheme theming: each scheme takes a mermaid theme name or
+  `{ theme, variables }`, so light and dark can carry different palettes.
+  `variables` may be a function, evaluated at render time, which is how
+  diagrams follow CSS custom properties through a daisyUI/Tailwind theme swap.
+  `themeVariables` merges rather than replaces at every level, so two callers
+  each setting one colour no longer erase each other.
 
 [Unreleased]: https://github.com/signalxjs/mermaid/commits/main

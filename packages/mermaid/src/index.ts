@@ -18,9 +18,12 @@ export {
     configureMermaid,
     getMermaidConfig,
     resetMermaidConfig,
+    mergeMermaidConfig,
     type MermaidOptions,
+    type MermaidSchemeTheme,
     type MermaidThemeName,
     type MermaidThemes,
+    type MermaidThemeVariables,
 } from './config';
 
 export {
@@ -28,6 +31,7 @@ export {
     renderDiagram,
     resolveColorScheme,
     resolveTheme,
+    resolveSchemeTheme,
     watchTheme,
     resetMermaidLoader,
     type RenderResult,
