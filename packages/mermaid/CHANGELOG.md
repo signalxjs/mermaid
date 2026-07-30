@@ -16,7 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     ` ```mermaid ` fences: lazy render on `IntersectionObserver`, SVG inserted as
     a sibling of the source `<pre>` (never over it), source left visible on a
     parse error, and a `MutationObserver` so diagrams added by `@sigx/ssg`'s
-    client-side navigation are picked up.
+    client-side navigation are picked up — including ones the router patched
+    in place, where the `<figure>` element is re-used and only its text
+    changes, which is why the enhancer keys on the diagram source and not on
+    element identity.
   - `@sigx/mermaid/ssg` — `rehypeMermaid`, which turns a mermaid fence into an
     accessible `<figure>` shell, lifting `title="…"` fence meta into a
     `<figcaption>`.

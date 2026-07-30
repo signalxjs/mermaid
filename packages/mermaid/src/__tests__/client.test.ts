@@ -220,6 +220,45 @@ describe('installMermaid', () => {
         expect(document.querySelectorAll('.sigx-mermaid-output svg').length).toBe(1);
     });
 
+    it('re-renders a figure the router patched in place with a new diagram', async () => {
+        // Regression, caught in a real browser: sigx patches the DOM across a
+        // client-side navigation rather than replacing it, so the outgoing
+        // page's <figure> elements are re-used for the incoming page — same
+        // element objects, new text in the <code>. Keyed on element identity
+        // alone the enhancer says "already claimed" and the previous page's
+        // SVG sits above the new page's source.
+        document.body.innerHTML = `<div id="app">${FIGURE}</div>`;
+        installMermaid();
+        await settle();
+
+        const figure = document.querySelector<HTMLElement>('[data-sigx-mermaid]')!;
+        expect(render).toHaveBeenCalledTimes(1);
+        expect(figure.querySelector('svg')!.getAttribute('data-source')).toContain('graph TD');
+
+        // The patch: same <figure>, same <pre>, different text.
+        figure.querySelector('.sigx-mermaid-source code')!.textContent = 'pie title Other';
+        await settle();
+
+        expect(render).toHaveBeenCalledTimes(2);
+        expect(render).toHaveBeenLastCalledWith(expect.any(String), 'pie title Other');
+        expect(figure.querySelectorAll('.sigx-mermaid-output').length).toBe(1);
+        expect(figure.querySelector('svg')!.getAttribute('data-source')).toBe('pie title Other');
+    });
+
+    it('leaves a patched-but-unchanged figure alone', async () => {
+        document.body.innerHTML = `<div id="app">${FIGURE}</div>`;
+        installMermaid();
+        await settle();
+
+        const figure = document.querySelector<HTMLElement>('[data-sigx-mermaid]')!;
+        const code = figure.querySelector('.sigx-mermaid-source code')!;
+        // A patch that rewrites the same text must not cost a re-render.
+        code.replaceChildren(document.createTextNode(code.textContent ?? ''));
+        await settle();
+
+        expect(render).toHaveBeenCalledTimes(1);
+    });
+
     it('does not double-render when a navigation re-inserts the same markup', async () => {
         document.body.innerHTML = `<div id="app">${FIGURE}</div>`;
         installMermaid();

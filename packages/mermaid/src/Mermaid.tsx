@@ -9,7 +9,7 @@
  * or a syntax error) still shows its definition instead of a blank frame.
  */
 
-import { component, onUnmounted } from 'sigx';
+import { component, onUnmounted, watch } from 'sigx';
 import { renderDiagram, watchTheme } from './render';
 import type { MermaidOptions } from './config';
 
@@ -83,6 +83,16 @@ export default component<MermaidProps>(({ props, signal, onMounted }) => {
             if (state.svg) void draw();
         });
     });
+
+    // A router that reuses this instance for a new route hands us a new `code`
+    // with no remount, and the old SVG would sit there looking authoritative.
+    // Skips the not-yet-drawn case, which the observer still owns.
+    watch(
+        () => props.code,
+        () => {
+            if (state.svg || state.error) void draw();
+        }
+    );
 
     onUnmounted(() => {
         generation++;

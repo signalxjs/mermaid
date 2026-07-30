@@ -42,15 +42,24 @@ const BARE_SELECTOR = 'pre > code.language-mermaid';
 /** Figures already claimed by an observer, so a re-scan never doubles up. */
 let claimed = new WeakSet<Element>();
 
+/**
+ * The source of the most recent render *request* per figure.
+ *
+ * Element identity is not enough to decide whether a figure is up to date.
+ * sigx patches the DOM in place across a client-side navigation: the `<figure>`
+ * elements of the outgoing page are reused for the incoming one, same objects
+ * with new text inside. Keyed only on identity, the enhancer sees "already
+ * claimed" and leaves the previous page's SVG sitting above the new page's
+ * source. Comparing the source catches that; `@sigx/live-code` keeps a `sig`
+ * field for the same reason.
+ */
+let lastRequested = new WeakMap<HTMLElement, string>();
+
 /** Rendered diagrams, kept so a light/dark toggle can re-render them. */
 const rendered = new Map<HTMLElement, { source: string; output: HTMLElement }>();
 
 /** Disposer for the currently-installed enhancer, if any. */
 let activeDispose: (() => void) | null = null;
-
-function isElement(node: Node): node is Element {
-    return node.nodeType === 1;
-}
 
 /**
  * Normalize either supported shape into a `<figure data-sigx-mermaid>` whose
@@ -86,6 +95,8 @@ function sourceOf(figure: HTMLElement): string {
 }
 
 async function renderInto(figure: HTMLElement, source: string): Promise<void> {
+    // Record before awaiting, so a re-scan mid-render doesn't queue a duplicate.
+    lastRequested.set(figure, source);
     figure.setAttribute('data-mermaid-state', 'pending');
 
     let output = figure.querySelector<HTMLElement>('.sigx-mermaid-output');
@@ -164,28 +175,46 @@ export function installMermaid(options: MermaidClientOptions = {}): () => void {
         ];
         for (const candidate of candidates) {
             const figure = toFigure(candidate);
-            if (!figure || claimed.has(figure)) continue;
-            claimed.add(figure);
-            if (io) io.observe(figure);
-            else void renderInto(figure, sourceOf(figure));
+            if (!figure) continue;
+
+            if (!claimed.has(figure)) {
+                claimed.add(figure);
+                if (io) io.observe(figure);
+                else void renderInto(figure, sourceOf(figure));
+                continue;
+            }
+
+            // Already claimed — but a navigation may have re-used this very
+            // element for a different diagram. Only the source can tell.
+            const source = sourceOf(figure);
+            if (lastRequested.has(figure) && lastRequested.get(figure) !== source) {
+                void renderInto(figure, source);
+            }
         }
     }
 
     // --- SPA navigation ---------------------------------------------------
     // @sigx/ssg swaps page content client-side and dispatches no navigation
     // event, so there is nothing to listen for — watch the app subtree instead.
-    // `claimed` makes the re-scan idempotent, including on back-navigation.
+    //
+    // `characterData` matters as much as `childList` here: patching a reused
+    // figure rewrites the text inside its <code>, which is a characterData
+    // mutation and nothing else. Without it a navigation between two pages
+    // whose layouts match can go completely unnoticed.
+    //
+    // Batched into a frame and re-scanning wholesale, because a patch arrives
+    // as a burst of small mutations and per-record work would repeat the same
+    // query dozens of times. `claimed` + `lastRequested` make it idempotent.
     const appRoot = (root instanceof Document ? root : document).querySelector('#app') ?? document.body;
-    const mo = new MutationObserver((records) => {
-        for (const record of records) {
-            for (const node of record.addedNodes) {
-                if (!isElement(node)) continue;
-                if (node.matches(FIGURE_SELECTOR) || node.matches(BARE_SELECTOR)) scan(node.parentNode ?? node);
-                else scan(node);
-            }
-        }
+    let scanScheduled = 0;
+    const mo = new MutationObserver(() => {
+        if (scanScheduled) return;
+        scanScheduled = requestAnimationFrame(() => {
+            scanScheduled = 0;
+            scan();
+        });
     });
-    if (appRoot) mo.observe(appRoot, { childList: true, subtree: true });
+    if (appRoot) mo.observe(appRoot, { childList: true, subtree: true, characterData: true });
 
     // --- Theme changes ----------------------------------------------------
     // Re-render everything already on screen when the palette flips.
@@ -207,10 +236,12 @@ export function installMermaid(options: MermaidClientOptions = {}): () => void {
         io?.disconnect();
         mo.disconnect();
         unwatchTheme();
+        if (scanScheduled) cancelAnimationFrame(scanScheduled);
         rendered.clear();
-        // WeakSet has no `clear()` — swap it out so a fresh install re-claims
-        // the figures still on the page.
+        // WeakSet/WeakMap have no `clear()` — swap them out so a fresh install
+        // re-claims the figures still on the page.
         claimed = new WeakSet<Element>();
+        lastRequested = new WeakMap<HTMLElement, string>();
         activeDispose = null;
     };
     return activeDispose;
