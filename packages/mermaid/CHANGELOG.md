@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `@sigx/mermaid` — the `<Mermaid>` component plus the render primitives
     (`renderDiagram`, `loadMermaid`, `resolveTheme`, `watchTheme`).
   - `@sigx/mermaid/client` — installs on import and progressively enhances
-    ` ```mermaid ` fences: lazy render on `IntersectionObserver`, SVG inserted as
+    ```` ```mermaid ```` fences: lazy render on `IntersectionObserver`, SVG inserted as
     a sibling of the source `<pre>` (never over it), source left visible on a
     parse error, and a `MutationObserver` so diagrams added by `@sigx/ssg`'s
     client-side navigation are picked up — including ones the router patched

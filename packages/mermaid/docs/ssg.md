@@ -3,7 +3,7 @@
 `@sigx/mermaid` is a generic sigx component — see the
 [package README](../README.md) for the component, theming and styling, all of
 which apply here unchanged. This page covers only the extra wiring that turns
-` ```mermaid ` fences in MDX into diagrams.
+```` ```mermaid ```` fences in MDX into diagrams.
 
 `@sigx/ssg` has no knowledge of mermaid and does not depend on it. What it
 provides is a generic seam — `markdown.shiki.skipLanguages` hands a fence
@@ -60,7 +60,7 @@ accessible name.
 </figure>
 ```
 
-No SVG — see [Why not build-time?](#why-not-build-time) below. On the client,
+No SVG — see [Why not build-time?](../README.md#why-not-build-time). On the client,
 `@sigx/mermaid/client` inserts a `.sigx-mermaid-output` **sibling** holding the
 SVG and hides the source `<pre>`. It never renders over the server markup, so
 there is no hydration divergence, and a diagram that fails to parse keeps its

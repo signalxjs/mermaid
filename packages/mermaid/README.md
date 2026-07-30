@@ -196,7 +196,7 @@ export { rehypeMermaid, mermaidThemeContribution, type RehypeMermaidOptions };
 
 ## Integrations
 
-- **[Static sites with `@sigx/ssg`](./docs/ssg.md)** — render ` ```mermaid `
+- **[Static sites with `@sigx/ssg`](./docs/ssg.md)** — render ```` ```mermaid ````
   fences in MDX. Adds `@sigx/mermaid/ssg` (a rehype plugin) and
   `@sigx/mermaid/client` (progressive enhancement) to the above.
 
