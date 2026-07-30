@@ -1,7 +1,7 @@
 # @sigx/mermaid
 
 [Mermaid](https://mermaid.js.org/) diagrams for [sigx](https://sigx.dev/) — a
-`<Mermaid>` component for any sigx app, and drop-in ` ```mermaid ` fence support
+`<Mermaid>` component for any sigx app, and drop-in ```` ```mermaid ```` fence support
 for [`@sigx/ssg`](https://sigx.dev/ssg/) sites.
 
 ## 📚 Documentation
@@ -11,7 +11,7 @@ Full guides, API reference and live examples → **<https://sigx.dev/>**
 ## Why this exists
 
 A docs site without diagrams explains architecture in prose. This package makes
-` ```mermaid ` fences just work, without giving up the things a static site is
+```` ```mermaid ```` fences just work, without giving up the things a static site is
 for: the diagram source stays in the HTML, mermaid loads only on pages that have
 a diagram and only once one scrolls into view, and diagrams re-theme when the
 reader flips light/dark.

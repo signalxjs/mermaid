@@ -3,10 +3,10 @@
 [Mermaid](https://mermaid.js.org/) diagrams for [sigx](https://sigx.dev/).
 
 - a `<Mermaid>` component for any sigx app
-- drop-in ` ```mermaid ` fence support for [`@sigx/ssg`](https://sigx.dev/ssg/)
-- diagrams follow the page's light/dark theme, re-rendering when it flips
+- diagrams follow the page's light/dark theme, re-rendering when it flips, and
+  can be recoloured to match your own palette
 - mermaid loads lazily — only on pages with a diagram, only once one is near the
-  viewport
+  viewport, and never on pages without one
 
 ## Installation
 
@@ -17,73 +17,7 @@ pnpm add @sigx/mermaid mermaid
 `mermaid` and `sigx` are **peer dependencies**; this package has no runtime
 dependencies of its own. You control mermaid's version.
 
-## Use with @sigx/ssg
-
-```ts
-// ssg.config.ts
-import { defineSSGConfig } from '@sigx/ssg';
-import { rehypeMermaid } from '@sigx/mermaid/ssg';
-
-export default defineSSGConfig({
-    markdown: {
-        // Both lines are required. `skipLanguages` stops shiki from claiming
-        // the fence; site rehype plugins run after shiki, so rehypeMermaid
-        // then finds the raw <pre><code class="language-mermaid">.
-        shiki: { skipLanguages: ['mermaid'] },
-        rehypePlugins: [rehypeMermaid],
-    },
-    clientImports: ['@sigx/mermaid/styles', '@sigx/mermaid/client'],
-});
-```
-
-Every other language still goes through shiki as usual.
-
-````mdx
-```mermaid title="Request flow"
-sequenceDiagram
-  Browser->>Server: GET /
-  Server-->>Browser: HTML
-```
-````
-
-The optional `title="…"` fence meta becomes a `<figcaption>` and the SVG's
-accessible name.
-
-### What lands in the HTML
-
-```html
-<figure class="sigx-mermaid" data-sigx-mermaid data-mermaid-title="Request flow">
-  <pre class="sigx-mermaid-source"><code>sequenceDiagram…</code></pre>
-  <figcaption class="sigx-mermaid-caption">Request flow</figcaption>
-</figure>
-```
-
-No SVG — see [Why not build-time?](#why-not-build-time) below. On the client,
-`@sigx/mermaid/client` inserts a `.sigx-mermaid-output` **sibling** holding the
-SVG and hides the source `<pre>`. It never renders over the server markup, so
-there is no hydration divergence, and a diagram that fails to parse keeps its
-source visible with `data-mermaid-state="error"`.
-
-`data-mermaid-state` moves `pending` → `ready` | `error`; style against it.
-
-The attribute is **absent from the SSR output** and appears only once the client
-claims the figure. That is deliberate: `pending` means "JavaScript has this and
-is working on it", which is a claim the server cannot make. Emitting `pending`
-statically would leave a reader with no JavaScript looking at a box that says it
-is loading forever — and any CSS reserving space for it would hold that space
-open permanently. With no attribute, the source `<pre>` is simply visible, which
-is the correct no-JS presentation. Style the absent case with
-`.sigx-mermaid:not([data-mermaid-state])` if you need to.
-
-### Without the rehype plugin
-
-The plugin is optional. `@sigx/mermaid/client` also claims a bare
-`pre > code.language-mermaid`, wrapping it in the same figure at runtime, so
-`skipLanguages` + `clientImports` alone is a working setup. What the plugin adds
-is the caption, a reserved box that stops the page jumping when the SVG lands,
-and markup that exists before JavaScript runs.
-
-## Use as a component
+## Usage
 
 ```tsx
 import { Mermaid } from '@sigx/mermaid';
@@ -100,10 +34,15 @@ import { Mermaid } from '@sigx/mermaid';
 | `options` | `MermaidOptions` | Per-instance overrides, merged over the global config. |
 | `eager` | `boolean` | Render on mount instead of on scroll-into-view. Default `false`. |
 
+The diagram source is emitted as a `<pre>` and only hidden once the SVG lands,
+so a diagram that has not rendered — no JavaScript yet, or a syntax error —
+still shows its definition instead of a blank frame.
+
 ## Configuration
 
+Global options, set once wherever your app starts up:
+
 ```ts
-// src/mermaid-config.ts
 import { configureMermaid } from '@sigx/mermaid';
 
 configureMermaid({
@@ -112,11 +51,8 @@ configureMermaid({
 });
 ```
 
-```ts
-// ssg.config.ts — the config module must come BEFORE the client entry,
-// which installs itself on import.
-clientImports: ['./src/mermaid-config', '@sigx/mermaid/client'];
-```
+Calls merge, so several modules can each contribute a slice. A single component
+can override any of it with the `options` prop.
 
 | Option | Default | Description |
 | --- | --- | --- |
@@ -226,30 +162,6 @@ Override the custom properties on `.sigx-mermaid`:
 `--sigx-mermaid-bg`, `--sigx-mermaid-border`, `--sigx-mermaid-muted`,
 `--sigx-mermaid-error`, `--sigx-mermaid-min-height`.
 
-## Caveats
-
-**1. `clientImports` is ignored when your project has a custom client entry.**
-`@sigx/ssg` skips the generated entry — and with it `clientImports` — when it
-detects `src/main.tsx` or similar. Those projects must import the client module
-themselves:
-
-```ts
-// src/main.tsx
-import '@sigx/mermaid/styles';
-import '@sigx/mermaid/client';
-```
-
-**2. mermaid is heavy to pre-bundle.** It pulls in d3, cytoscape and katex.
-Exclude it from Vite's dependency optimizer to keep dev-server cold start fast —
-it is dynamically imported either way, so it still gets its own chunk:
-
-```ts
-// vite.config.ts
-export default defineConfig({
-    optimizeDeps: { exclude: ['mermaid'] },
-});
-```
-
 ## Why not build-time?
 
 Rendering to SVG during the build would mean zero client JavaScript, and it is
@@ -278,9 +190,15 @@ export type {
 // @sigx/mermaid/client   — installs on import
 export { installMermaid, uninstallMermaid, type MermaidClientOptions };
 
-// @sigx/mermaid/ssg
+// @sigx/mermaid/ssg   — see docs/ssg.md
 export { rehypeMermaid, mermaidThemeContribution, type RehypeMermaidOptions };
 ```
+
+## Integrations
+
+- **[Static sites with `@sigx/ssg`](./docs/ssg.md)** — render ```` ```mermaid ````
+  fences in MDX. Adds `@sigx/mermaid/ssg` (a rehype plugin) and
+  `@sigx/mermaid/client` (progressive enhancement) to the above.
 
 ## License
 
