@@ -118,10 +118,28 @@ clientImports: ['./src/mermaid-config', '@sigx/mermaid/client'];
 
 ### Theme detection
 
-In order, first match wins: an explicit `resolveColorScheme`; `data-theme` of
-exactly `light`/`dark`; the *computed* `color-scheme` (which is how named
-daisyUI themes like `night` or `cupcake` resolve); a `.dark` class on `<html>`;
-`prefers-color-scheme`.
+In order, first match wins:
+
+1. an explicit `resolveColorScheme`
+2. `data-theme` of exactly `light` / `dark` on `<html>`
+3. the *computed* `color-scheme` — how named daisyUI themes like `night` or
+   `cupcake` resolve
+4. a `.dark` class on `<html>` (the Tailwind convention)
+5. the page's actual background colour
+
+Note what is **not** in that list: `prefers-color-scheme`. A page that hasn't
+opted into dark mode renders light no matter what the OS prefers, so keying off
+the OS puts a dark diagram on a white page. Reading the background answers the
+question actually being asked — *is this diagram about to sit on something
+dark?* — and it works whether the site themes itself with `data-theme`, a class,
+or a bare `@media (prefers-color-scheme: dark)` block that declares no
+`color-scheme`. A page with no background at all is canvas white, so: light.
+
+If your page is dark in a way none of these can see, say so directly:
+
+```ts
+configureMermaid({ resolveColorScheme: () => (myStore.dark ? 'dark' : 'light') });
+```
 
 When the resolved theme changes, already-rendered diagrams re-render. Diagrams
 that haven't drawn yet simply pick up the new theme when they do.

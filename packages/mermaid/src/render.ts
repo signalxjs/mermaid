@@ -41,6 +41,18 @@ export function resetMermaidLoader(): void {
     seq = 0;
 }
 
+/** Perceived lightness of an `rgb()`/`rgba()` string, or null if unreadable. */
+function luminanceOf(color: string | undefined): number | null {
+    if (!color) return null;
+    const parts = /^rgba?\(([^)]+)\)/.exec(color);
+    if (!parts) return null;
+    const [r, g, b, a] = parts[1].split(/[,/\s]+/).filter(Boolean).map(Number);
+    // Fully transparent: this element contributes nothing, keep looking upward.
+    if (Number.isFinite(a) && a === 0) return null;
+    if (![r, g, b].every(Number.isFinite)) return null;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
 /**
  * Detect the page's colour scheme, most explicit signal first:
  *
@@ -49,7 +61,16 @@ export function resetMermaidLoader(): void {
  * 3. the *computed* `color-scheme` — daisyUI sets this per theme, so it
  *    resolves named themes like `night` or `cupcake` that step 2 can't;
  * 4. a `.dark` class on `<html>` — the Tailwind convention;
- * 5. `prefers-color-scheme`.
+ * 5. the page's actual background colour.
+ *
+ * Step 5 replaces the obvious `prefers-color-scheme` fallback, which is wrong
+ * often enough to matter: a page that has *not* opted into dark mode renders
+ * light no matter what the OS prefers, so keying off the OS puts a dark diagram
+ * on a white page. Reading the background instead answers the question that is
+ * actually being asked — "is this diagram about to sit on something dark?" —
+ * and it works whether the site themes itself with `data-theme`, a class, or a
+ * bare `@media (prefers-color-scheme: dark)` block that sets no `color-scheme`.
+ * A page with no background at all is canvas white, hence light.
  */
 export function resolveColorScheme(options?: MermaidOptions): 'light' | 'dark' {
     const override = options?.resolveColorScheme ?? getMermaidConfig().resolveColorScheme;
@@ -65,8 +86,8 @@ export function resolveColorScheme(options?: MermaidOptions): 'light' | 'dark' {
     // detection throw, the diagram is more important than its palette.
     try {
         const scheme = getComputedStyle(root).colorScheme;
-        // `color-scheme: light dark` means "follow the system" — fall through
-        // to `prefers-color-scheme` rather than picking whichever is listed first.
+        // `color-scheme: light dark` means "follow the system" — it is not a
+        // choice, so fall through rather than picking whichever is listed first.
         if (scheme && scheme !== 'normal' && !(scheme.includes('light') && scheme.includes('dark'))) {
             if (scheme.includes('dark')) return 'dark';
             if (scheme.includes('light')) return 'light';
@@ -77,9 +98,16 @@ export function resolveColorScheme(options?: MermaidOptions): 'light' | 'dark' {
 
     if (root.classList.contains('dark')) return 'dark';
 
-    return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
+    try {
+        for (const element of [document.body, root]) {
+            const luminance = luminanceOf(element && getComputedStyle(element).backgroundColor);
+            if (luminance !== null) return luminance < 0.5 ? 'dark' : 'light';
+        }
+    } catch {
+        /* fall through */
+    }
+
+    return 'light';
 }
 
 /** The mermaid theme name for the page's current colour scheme. */

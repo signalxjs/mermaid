@@ -23,7 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `@sigx/mermaid/styles` — cosmetic stylesheet; nothing functional depends on it.
 - Light/dark support: diagrams re-render when the resolved theme changes.
   Detection order is `resolveColorScheme` → `data-theme` → computed
-  `color-scheme` → `.dark` class → `prefers-color-scheme`.
+  `color-scheme` → `.dark` class → the page's background luminance.
+  `prefers-color-scheme` is deliberately **not** consulted: a page that has not
+  opted into dark mode renders light whatever the OS prefers, and keying off the
+  OS put mermaid's dark theme (black nodes) on a white page.
 - `configureMermaid()` for global themes, `securityLevel` (default `'strict'`)
   and arbitrary mermaid config.
 

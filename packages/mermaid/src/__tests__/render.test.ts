@@ -15,6 +15,8 @@ describe('resolveColorScheme', () => {
         resetMermaidLoader();
         document.documentElement.removeAttribute('data-theme');
         document.documentElement.className = '';
+        document.documentElement.style.removeProperty('background-color');
+        document.body.style.removeProperty('background-color');
         setComputedColorScheme(null);
     });
 
@@ -40,7 +42,7 @@ describe('resolveColorScheme', () => {
 
     it('treats "light dark" as "follow the system", not as a choice', () => {
         setComputedColorScheme('light dark');
-        // No `.dark` class and happy-dom reports no dark preference.
+        // Nothing else says dark, and the page has no background — light.
         expect(resolveColorScheme()).toBe('light');
 
         document.documentElement.classList.add('dark');
@@ -50,6 +52,37 @@ describe('resolveColorScheme', () => {
     it('falls back to a Tailwind-style .dark class', () => {
         document.documentElement.classList.add('dark');
         expect(resolveColorScheme()).toBe('dark');
+    });
+
+    it('falls back to the page background when nothing is declared', () => {
+        // A site that themes itself with a bare
+        // `@media (prefers-color-scheme: dark)` block declares no color-scheme
+        // and sets no class — the painted background is the only signal.
+        document.body.style.backgroundColor = 'rgb(17, 17, 17)';
+        expect(resolveColorScheme()).toBe('dark');
+
+        document.body.style.backgroundColor = 'rgb(250, 250, 250)';
+        expect(resolveColorScheme()).toBe('light');
+    });
+
+    it('looks past a transparent body to the html background', () => {
+        document.body.style.backgroundColor = 'rgba(0, 0, 0, 0)';
+        document.documentElement.style.backgroundColor = 'rgb(10, 10, 10)';
+        expect(resolveColorScheme()).toBe('dark');
+    });
+
+    it('calls an unstyled page light, whatever the OS prefers', () => {
+        // Regression: this used to fall through to `prefers-color-scheme`, so
+        // a plain white page on a machine in dark mode got mermaid's dark
+        // theme — black nodes on white paper.
+        const matchMediaSpy = vi
+            .spyOn(globalThis, 'matchMedia')
+            .mockReturnValue({ matches: true } as unknown as MediaQueryList);
+
+        expect(resolveColorScheme()).toBe('light');
+        expect(matchMediaSpy).not.toHaveBeenCalled();
+
+        matchMediaSpy.mockRestore();
     });
 
     it('lets configureMermaid override detection entirely', () => {
@@ -64,6 +97,8 @@ describe('resolveTheme', () => {
         resetMermaidConfig();
         document.documentElement.removeAttribute('data-theme');
         document.documentElement.className = '';
+        document.documentElement.style.removeProperty('background-color');
+        document.body.style.removeProperty('background-color');
         setComputedColorScheme(null);
     });
 
@@ -96,6 +131,8 @@ describe('watchTheme', () => {
         resetMermaidConfig();
         document.documentElement.removeAttribute('data-theme');
         document.documentElement.className = '';
+        document.documentElement.style.removeProperty('background-color');
+        document.body.style.removeProperty('background-color');
         setComputedColorScheme(null);
         vi.useFakeTimers();
     });

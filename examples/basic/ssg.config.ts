@@ -19,6 +19,13 @@ export default defineSSGConfig({
         rehypePlugins: [rehypeMermaid],
     },
 
-    // The stylesheet is cosmetic; the client entry is what renders diagrams.
-    clientImports: ['@sigx/ssg/styles.css', '@sigx/mermaid/styles', '@sigx/mermaid/client'],
+    // The mermaid stylesheet is cosmetic; the client entry is what renders
+    // diagrams. global.css declares `color-scheme`, which is how @sigx/mermaid
+    // decides between the light and dark mermaid themes.
+    clientImports: [
+        '@sigx/ssg/styles.css',
+        './src/styles/global.css',
+        '@sigx/mermaid/styles',
+        '@sigx/mermaid/client',
+    ],
 });
