@@ -24,11 +24,9 @@ const fromSiteTokens = () => ({
     secondaryColor: cssVar('--surface'),
     tertiaryColor: cssVar('--bg'),
     fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-
-    // mermaid's own themes leave the edge-label chip a light grey in both
-    // schemes, which reads as a highlighter smear over a dark diagram. The
-    // page background makes the label sit on the canvas instead.
-    edgeLabelBackground: cssVar('--bg'),
+    // No `edgeLabelBackground` here on purpose: @sigx/mermaid defaults it to
+    // the page background, and this example doubles as the check that the
+    // default actually works.
 });
 
 configureMermaid({

@@ -7,6 +7,8 @@ import {
     resolveThemeVariables,
 } from '../config';
 import {
+    defaultThemeVariables,
+    pageBackgroundColor,
     resolveColorScheme,
     resolveSchemeTheme,
     resolveTheme,
@@ -311,5 +313,34 @@ describe('mergeMermaidConfig', () => {
         expect(getMermaidConfig().config).toEqual({
             themeVariables: { primaryColor: '#111', lineColor: '#222' },
         });
+    });
+});
+
+
+describe('defaultThemeVariables', () => {
+    beforeEach(() => {
+        resetMermaidConfig();
+        document.documentElement.style.removeProperty('background-color');
+        document.body.style.removeProperty('background-color');
+    });
+
+    it('sets edgeLabelBackground from the page background', () => {
+        // mermaid hardcodes a light grey here in every built-in theme,
+        // including the dark ones, so an edge label lands as a highlighter
+        // smear across a dark diagram.
+        document.body.style.backgroundColor = 'rgb(13, 17, 23)';
+        expect(defaultThemeVariables()).toEqual({ edgeLabelBackground: 'rgb(13, 17, 23)' });
+    });
+
+    it('stays out of the way when no background is painted', () => {
+        // Canvas white, which is what mermaid's own default already assumes.
+        expect(defaultThemeVariables()).toEqual({});
+        expect(pageBackgroundColor()).toBeNull();
+    });
+
+    it('looks past a transparent body to the html background', () => {
+        document.body.style.backgroundColor = 'rgba(0, 0, 0, 0)';
+        document.documentElement.style.backgroundColor = 'rgb(255, 255, 255)';
+        expect(pageBackgroundColor()).toBe('rgb(255, 255, 255)');
     });
 });

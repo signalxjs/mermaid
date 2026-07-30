@@ -16,6 +16,7 @@ import {
     type MermaidOptions,
     type MermaidSchemeTheme,
     type MermaidThemes,
+    type MermaidThemeVariables,
 } from './config';
 
 /** The slice of mermaid's API this package uses. */
@@ -47,6 +48,25 @@ export function resetMermaidLoader(): void {
     mermaidPromise = null;
     renderQueue = Promise.resolve();
     seq = 0;
+}
+
+/**
+ * The page's effective background colour — the first non-transparent one
+ * walking `<body>` then `<html>` — or null when nothing paints one (in which
+ * case the canvas is showing through and there is nothing useful to report).
+ */
+export function pageBackgroundColor(): string | null {
+    if (typeof document === 'undefined') return null;
+    try {
+        for (const element of [document.body, document.documentElement]) {
+            if (!element) continue;
+            const color = getComputedStyle(element).backgroundColor;
+            if (luminanceOf(color) !== null) return color;
+        }
+    } catch {
+        /* `getComputedStyle` is missing in some minimal DOM shims */
+    }
+    return null;
 }
 
 /** Perceived lightness of an `rgb()`/`rgba()` string, or null if unreadable. */
@@ -107,10 +127,8 @@ export function resolveColorScheme(options?: MermaidOptions): 'light' | 'dark' {
     if (root.classList.contains('dark')) return 'dark';
 
     try {
-        for (const element of [document.body, root]) {
-            const luminance = luminanceOf(element && getComputedStyle(element).backgroundColor);
-            if (luminance !== null) return luminance < 0.5 ? 'dark' : 'light';
-        }
+        const luminance = luminanceOf(pageBackgroundColor() ?? undefined);
+        if (luminance !== null) return luminance < 0.5 ? 'dark' : 'light';
     } catch {
         /* fall through */
     }
@@ -129,6 +147,24 @@ export function resolveSchemeTheme(options?: MermaidOptions): MermaidSchemeTheme
 /** The mermaid theme *name* for the page's current colour scheme. */
 export function resolveTheme(options?: MermaidOptions): string {
     return resolveSchemeTheme(options).theme;
+}
+
+/**
+ * Theme variables this package supplies before anyone else gets a say. Sits at
+ * the bottom of the precedence chain, so every explicit setting overrides it.
+ *
+ * Only `edgeLabelBackground`, and only when the page's background can be read.
+ * mermaid hardcodes it to a light grey in every built-in theme including the
+ * dark ones, so an edge label lands as a highlighter smear across a dark
+ * diagram. The page background is the right value rather than `transparent`,
+ * because the chip's job is to occlude the line running underneath it.
+ *
+ * When no background is painted the canvas is white, which is what mermaid's
+ * own default already assumes — so leave it alone rather than guess.
+ */
+export function defaultThemeVariables(): MermaidThemeVariables {
+    const background = pageBackgroundColor();
+    return background ? { edgeLabelBackground: background } : {};
 }
 
 /**
@@ -153,7 +189,9 @@ function themeSignature(): string {
     const scheme = resolveSchemeTheme();
     let variables = '';
     try {
-        variables = JSON.stringify(resolveThemeVariables(scheme));
+        // Defaults included: `edgeLabelBackground` follows the page background,
+        // which can change without the scheme or theme name changing.
+        variables = JSON.stringify({ ...defaultThemeVariables(), ...resolveThemeVariables(scheme) });
     } catch {
         /* a throwing resolver shouldn't wedge the watcher */
     }
@@ -230,14 +268,20 @@ export function renderDiagram(source: string, options?: MermaidOptions): Promise
         const opts = getMermaidConfig();
         const scheme = resolveSchemeTheme(options);
 
-        // Config precedence, lowest first: global `config`, per-call `config`,
-        // then the active scheme's `variables` — the most specific statement of
-        // "this is what the diagram should look like right now" wins. Variables
-        // merge at every step instead of replacing (mergeMermaidConfig), so a
-        // scheme that overrides one colour keeps the rest.
-        const config = mergeMermaidConfig(mergeMermaidConfig(opts.config, options?.config), {
-            themeVariables: resolveThemeVariables(scheme),
-        });
+        // Config precedence, lowest first: our own defaults, global `config`,
+        // per-call `config`, then the active scheme's `variables` — the most
+        // specific statement of "this is what the diagram should look like
+        // right now" wins. Variables merge at every step instead of replacing
+        // (mergeMermaidConfig), so a scheme that overrides one colour keeps
+        // the rest, and our defaults never clobber a caller's choice.
+        const config = [
+            opts.config,
+            options?.config,
+            { themeVariables: resolveThemeVariables(scheme) },
+        ].reduce<Record<string, unknown>>(
+            (acc, layer) => mergeMermaidConfig(acc, layer),
+            { themeVariables: defaultThemeVariables() }
+        );
 
         mermaid.initialize({
             startOnLoad: false,

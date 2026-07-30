@@ -38,5 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   diagrams follow CSS custom properties through a daisyUI/Tailwind theme swap.
   `themeVariables` merges rather than replaces at every level, so two callers
   each setting one colour no longer erase each other.
+- `edgeLabelBackground` defaults to the page's background colour. mermaid
+  hardcodes a light grey in every built-in theme including the dark ones, so an
+  edge label otherwise lands as a highlighter smear across a dark diagram. It
+  sits at the bottom of the precedence chain, so any explicit value wins, and
+  it is skipped entirely when the page paints no background.
 
 [Unreleased]: https://github.com/signalxjs/mermaid/commits/main

@@ -32,6 +32,8 @@ export {
     resolveColorScheme,
     resolveTheme,
     resolveSchemeTheme,
+    defaultThemeVariables,
+    pageBackgroundColor,
     watchTheme,
     resetMermaidLoader,
     type RenderResult,

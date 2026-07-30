@@ -145,9 +145,6 @@ const fromTokens = () => ({
     primaryColor: cssVar('--b2'),
     primaryTextColor: cssVar('--bc'),
     lineColor: cssVar('--bc'),
-    // mermaid leaves this a light grey in every theme, which reads as a
-    // highlighter smear over a dark diagram.
-    edgeLabelBackground: cssVar('--b1'),
 });
 
 configureMermaid({
@@ -157,9 +154,21 @@ configureMermaid({
 
 A working version of this is in [`examples/basic`](../../examples/basic/src/mermaid-config.ts).
 
-Precedence, lowest first: global `config` → per-call `options.config` → the
-active scheme's `variables`. `themeVariables` merges at each step, so overriding
-one colour keeps the rest.
+Precedence, lowest first: **package defaults** → global `config` → per-call
+`options.config` → the active scheme's `variables`. `themeVariables` merges at
+each step, so overriding one colour keeps the rest.
+
+### What the package sets for you
+
+One variable, and only when the page's background is readable:
+
+| Variable | Default | Why |
+| --- | --- | --- |
+| `edgeLabelBackground` | the page background | mermaid hardcodes a light grey in every built-in theme, *including the dark ones*, so an edge label lands as a highlighter smear across a dark diagram. The page background rather than `transparent`, because the chip's job is to occlude the line running under it. |
+
+Set it yourself to override, `'transparent'` included. When no background is
+painted the canvas is white — which is what mermaid's default already assumes —
+so nothing is applied.
 
 ### Theme detection
 
