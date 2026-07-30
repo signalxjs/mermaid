@@ -1,8 +1,9 @@
-# TODO(sigx-standard): this workflow publishes to npm via trusted publishing
-# (OIDC). It expects `scripts/publish.js` (publishes the repo's package(s) in
-# dependency order) and `scripts/verify-pack.js`. Copy both from signalxjs/core
-# as a starting point, or replace the "Publish to npm" / "Verify pack" steps
-# with your own. Configure trusted publishing per-package on npmjs.com first.
+# Publishes @sigx/mermaid to npm via trusted publishing (OIDC) on a `vX.Y.Z`
+# tag. Uses `scripts/publish.js` and `scripts/verify-pack.js`.
+#
+# One-time setup before the first release: configure trusted publishing for
+# `@sigx/mermaid` on npmjs.com, pointing at signalxjs/mermaid + this workflow.
+# Until that is done a tag push will fail at the publish step.
 name: Release
 
 on:

@@ -1,0 +1,27 @@
+packages:
+  - 'packages/*'
+  - 'examples/*'
+
+onlyBuiltDependencies:
+  - esbuild
+
+# Single source of truth for the SignalX core version this repo builds against.
+# `^0.13.0` == `>=0.13.0 <0.14.0` (ONE minor).
+# @sigx/reactivity keeps reactive state in module-local variables, so two physical
+# copies silently split core's singletons and break reactivity; the single-minor
+# range forces pnpm to hoist ONE copy. Bump this one block to move the whole repo
+# to a new core minor — `pnpm sync:core X.Y` does exactly that. Consumed via
+# `"catalog:"` in package.json; `pnpm pack` rewrites it to the concrete range.
+#
+# @sigx/router and @sigx/ssg are SIBLINGS, not core: they track their own release
+# lines and `pnpm sync:core` does not touch them, so bump them by hand to the
+# releases aligned with the same core minor as the entries above. They are only
+# needed by examples/. The core line here is therefore not the newest one —
+# it is whatever the *released* @sigx/ssg peers (0.18.0 peers core ^0.13.0 /
+# router ^0.10.0); moving ahead of it would make every example install warn.
+catalog:
+  sigx: ^0.13.0
+  '@sigx/vite': ^0.13.0
+  '@sigx/server-renderer': ^0.13.0
+  '@sigx/router': ^0.10.0
+  '@sigx/ssg': ^0.18.0

@@ -1,4 +1,4 @@
-# Contributing to SignalX <REPO>
+# Contributing to SignalX mermaid
 
 Thanks for your interest! This repo is part of the
 [`signalxjs`](https://github.com/signalxjs) family. It follows the **sigx
@@ -17,8 +17,8 @@ We use the standard `main` / `branches` worktree layout. Clone the primary
 checkout into a `main` folder:
 
 ```bash
-git clone https://github.com/signalxjs/<REPO>.git <REPO>/main
-cd <REPO>/main
+git clone https://github.com/signalxjs/mermaid.git mermaid/main
+cd mermaid/main
 pnpm install
 pnpm build
 ```
@@ -46,8 +46,16 @@ parallel checkouts.
 | Build | `pnpm build` |
 | Run tests | `pnpm test` |
 | Tests in watch mode | `pnpm test:watch` |
+| Coverage | `pnpm test:coverage` |
 | Typecheck | `pnpm typecheck` |
 | Lint | `pnpm lint` |
+| Bundle size | `pnpm size` |
+| Pack smoke test | `pnpm verify:pack` |
+| Run the example site | `pnpm --filter @sigx-examples/mermaid-basic dev` |
+
+**Run `pnpm build` before `pnpm test`.** The e2e test builds `examples/basic`
+for real, and the example resolves `@sigx/mermaid` through the workspace link's
+`exports` map — i.e. through `dist`. Without a build it skips rather than fails.
 
 ## Pre-push checklist
 
@@ -73,8 +81,8 @@ pnpm build
 
 ## Reporting bugs and requesting features
 
-- **Bug?** Open an issue with the [bug report template](https://github.com/signalxjs/<REPO>/issues/new?template=bug_report.yml). A minimal reproduction helps a lot.
-- **Feature idea?** Use the [feature request template](https://github.com/signalxjs/<REPO>/issues/new?template=feature_request.yml).
+- **Bug?** Open an issue with the [bug report template](https://github.com/signalxjs/mermaid/issues/new?template=bug_report.yml). A minimal reproduction helps a lot.
+- **Feature idea?** Use the [feature request template](https://github.com/signalxjs/mermaid/issues/new?template=feature_request.yml).
 
 ## Code of conduct
 

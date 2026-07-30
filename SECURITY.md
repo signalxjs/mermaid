@@ -7,7 +7,7 @@
 Use one of the following private channels:
 
 1. **GitHub Security Advisories** — preferred. Open a private report at
-   <https://github.com/signalxjs/<REPO>/security/advisories/new>.
+   <https://github.com/signalxjs/mermaid/security/advisories/new>.
 2. **Email** — contact the maintainer directly: **Andreas Ekdahl**
    <andy@ekdahls.net>.
 
@@ -27,5 +27,12 @@ Please include:
 
 ## Supported versions
 
-<!-- TODO(sigx-standard): set the supported version line for this repo. -->
-Security fixes are applied to the latest released minor line.
+Security fixes are applied to the latest released minor line of `@sigx/mermaid`
+(currently `0.1.x`). Older minors are not patched.
+
+Note that `mermaid` itself is a **peer dependency**: vulnerabilities in mermaid's
+own parsing or SVG generation are reported to
+[mermaid-js/mermaid](https://github.com/mermaid-js/mermaid/security), and you fix
+them by upgrading your own `mermaid` install — no release of this package is
+needed. `@sigx/mermaid` initializes mermaid with `securityLevel: 'strict'` by
+default; raising it is opt-in.

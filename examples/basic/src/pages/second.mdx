@@ -1,0 +1,28 @@
+---
+title: Second page
+description: A diagram reached by client-side navigation
+---
+
+# Second page
+
+Reached from the [home page](/) through `@sigx/ssg`'s client-side navigation.
+That swap dispatches no event, so the enhancer notices the new markup with a
+`MutationObserver` — this page exists to prove it.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pending
+  Pending --> Ready: svg inserted
+  Pending --> Error: parse failed
+  Error --> [*]
+  Ready --> [*]
+```
+
+## Invalid on purpose
+
+An unparseable diagram must leave its source visible rather than a blank frame.
+
+```mermaid
+graph TD
+  this is not )( valid mermaid
+```

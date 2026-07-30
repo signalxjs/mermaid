@@ -1,4 +1,4 @@
-# SignalX <REPO> — shared agent guide
+# SignalX mermaid — shared agent guide
 
 > ⚠️ **BRANCH FIRST — never work on `main`.** Before touching ANY file, create a
 > worktree (`pnpm wt new <N-short-slug>`) and do everything from
@@ -21,17 +21,33 @@ This is the sigx standard agent setup. The same pattern (this file +
 it originates in [`signalxjs/repo-template`](https://github.com/signalxjs/repo-template).
 See "Adopting this setup in another sigx repo" at the bottom.
 
-<!-- TODO(sigx-standard): replace this paragraph with what THIS repo is. Example: -->
-SignalX (sigx) <REPO> is a pnpm monorepo (ESM, `"type": "module"`) of the
-packages under `packages/`. Tech stack: TypeScript (strict), Vite, Vitest,
-oxlint. Published to npm under the `@sigx` scope.
-<!-- Single-package repo? Say so here ("…is a single npm package, not a workspace")
-     and drop the workspace/`--filter` bits from "Build, Test, Lint" and "Packages". -->
+SignalX `mermaid` (`signalxjs/mermaid`) publishes **`@sigx/mermaid`** — mermaid
+diagrams for sigx. A pnpm monorepo (ESM, `"type": "module"`) with the single
+package under `packages/` and an example site under `examples/`. Tech stack:
+TypeScript (strict), Vitest, oxlint; published to npm under the `@sigx` scope.
+
+**The shape of this package, and why.** mermaid renders in the browser and
+nowhere else: it measures text with `getBBox`, which no server-side DOM shim
+implements faithfully, so build-time SVG would mean shipping a headless
+Chromium. Instead the SSR output is an inert `<figure>` holding the diagram
+source, and `@sigx/mermaid/client` swaps in an SVG once the figure scrolls into
+view. Three rules follow from that and should not be broken casually:
+
+- **Never `render()` over the SSR subtree.** The SVG is inserted as a *sibling*
+  and the source `<pre>` is hidden. Rendering a framework tree over server
+  markup is what caused duplicated widgets in signalxjs/live-code#34.
+- **Degrade visibly.** A diagram that fails to parse keeps its source on the
+  page. A blank frame is never an acceptable outcome.
+- **mermaid must stay out of the entry chunk.** It drags in d3, cytoscape and
+  katex; a page with no diagrams must not pay for it. The e2e test asserts this.
+
+`@sigx/ssg` needs no changes to support any of it — `markdown.shiki.skipLanguages`
+and site `rehypePlugins` were already the documented seam.
 
 ## Development workflow (issue → PR → Copilot review → merge)
 
 **This is mandatory for EVERY agent-driven change — including one-line fixes.
-Never commit straight to `main`.** Repo: `signalxjs/<REPO>`, base branch `main`.
+Never commit straight to `main`.** Repo: `signalxjs/mermaid`, base branch `main`.
 (Human contributors follow `CONTRIBUTING.md`, where an issue is optional; for
 agents the issue-first flow below is required.)
 
@@ -69,7 +85,7 @@ agents the issue-first flow below is required.)
    `gh` is too old to resolve `@copilot` (error: `'@copilot' not found`), request it
    via the API instead — don't skip it:
    ```sh
-   gh api --method POST repos/signalxjs/<REPO>/pulls/<pr>/requested_reviewers \
+   gh api --method POST repos/signalxjs/mermaid/pulls/<pr>/requested_reviewers \
      -f 'reviewers[]=copilot-pull-request-reviewer[bot]'
    ```
    (The reviewer-request API takes the `[bot]`-suffixed slug; the review author
@@ -87,7 +103,7 @@ agents the issue-first flow below is required.)
 
    **Then resolve the threads.** Where the repo's ruleset sets
    `required_review_thread_resolution` (check with
-   `gh api repos/signalxjs/<REPO>/rules/branches/main`), a PR carrying an
+   `gh api repos/signalxjs/mermaid/rules/branches/main`), a PR carrying an
    unresolved **inline** comment cannot merge however green it is — with a
    merge queue it silently never enqueues, and `gh pr checks` shows nothing
    wrong. Pushing the fix does not resolve a thread, and neither does replying
@@ -95,7 +111,7 @@ agents the issue-first flow below is required.)
    resolve it over GraphQL:
    ```sh
    # list the open threads
-   gh api graphql -f query='query { repository(owner:"signalxjs", name:"<REPO>") {
+   gh api graphql -f query='query { repository(owner:"signalxjs", name:"mermaid") {
      pullRequest(number:<pr>) { reviewThreads(first:100) { nodes {
        id isResolved comments(first:1){nodes{body}} } } } } }' \
      -q '.data.repository.pullRequest.reviewThreads.nodes[]
@@ -130,34 +146,53 @@ agents the issue-first flow below is required.)
 
 ## Build, Test, Lint
 
-<!-- TODO(sigx-standard): adapt these to THIS repo's scripts. The defaults below
-     are the monorepo shape from signalxjs/core. -->
-
 ```bash
 pnpm install
-pnpm build       # build all packages
-pnpm test        # vitest run (unit tests across packages)
+pnpm build       # tsgo → packages/mermaid/dist
+pnpm test        # vitest run
 pnpm test -- <path>                # single test file/dir (substring match)
 pnpm test -- -t "name of test"     # single test by name (vitest -t)
 pnpm test:watch
 pnpm test:coverage
-pnpm typecheck   # tsgo (a fast TS compiler), config: tsconfig.json
-pnpm lint        # oxlint over the packages' src
+pnpm typecheck   # tsgo --noEmit
+pnpm lint        # oxlint over packages/mermaid/src
 pnpm lint:fix
 pnpm size        # size-limit bundle-size check (.size-limit.json)
+pnpm verify:pack # pack the tarball and check every exports target resolves
+pnpm verify:catalog
 ```
 
-To run an example/app: `pnpm --filter <package-name> dev`.
+**`pnpm build` before `pnpm test`.** `src/__tests__/example-e2e.test.ts` builds
+`examples/basic` for real, and the example resolves `@sigx/mermaid` through the
+workspace link's `exports` map — i.e. through `dist`. Without a build it skips
+with a notice rather than failing, so a green run proves less than it looks.
+
+To run the example site: `pnpm --filter @sigx-examples/mermaid-basic dev`
+(or `build:site` for the production build).
 
 ## Packages
 
-<!-- TODO(sigx-standard): list THIS repo's packages, or delete this section for a
-     single-package repo. Example shape: -->
+- `packages/mermaid` → `@sigx/mermaid` — the whole library. Four entry points,
+  one release train:
+  - `.` — the `<Mermaid>` sigx component and the render primitives
+  - `./client` — side-effect module that enhances ` ```mermaid ` fences
+  - `./ssg` — `rehypeMermaid`, the `@sigx/ssg` markdown plugin
+  - `./styles` — the stylesheet (cosmetic only; nothing functional depends on it)
 
-- `packages/<name>` → `@sigx/<name>` — what it does.
+  `mermaid` and `sigx` are peers; the package has **no runtime dependencies**.
+  Keep it that way — the hast walk in `src/ssg.ts` is hand-rolled precisely so
+  `unist-util-visit` and `@types/hast` don't leak into consumers.
 
-Path aliases: `tsconfig.json` and `vitest.config.ts` map `@sigx/*` to
-`packages/*/src`, so tests and typecheck run against source, not dist.
+### Examples
+
+- `examples/basic` — private workspace app: an `@sigx/ssg` site with several
+  diagram types, an intentionally-invalid diagram, and a second page reached by
+  client-side navigation. It doubles as the fixture for
+  `packages/mermaid/src/__tests__/example-e2e.test.ts`, which needs `pnpm build`
+  first. If you change its pages, keep the e2e assertions in sync.
+
+Path aliases: `tsconfig.json` and `vitest.config.ts` map `@sigx/mermaid` to
+`packages/mermaid/src`, so unit tests and typecheck run against source, not dist.
 
 ## Parallel work with git worktrees
 
@@ -204,8 +239,8 @@ the queue, in two moments:
   from the PR:
   ```sh
   gh issue create --repo signalxjs/signalxjs.github.io \
-    --title "<REPO>: <what changed>" \
-    --body "Source: signalxjs/<REPO>#<pr>. <What needs documenting, and where on the site.> Not yet released."
+    --title "mermaid: <what changed>" \
+    --body "Source: signalxjs/mermaid#<pr>. <What needs documenting, and where on the site.> Not yet released."
   ```
   A user-facing PR isn't mergeable until its docs issue exists (see step 6 of
   the workflow).
@@ -213,7 +248,7 @@ the queue, in two moments:
   every open docs issue covering a change shipped in that release:
   ```sh
   gh issue comment <n> --repo signalxjs/signalxjs.github.io \
-    --body "Released in <REPO> vX.Y.Z."
+    --body "Released in mermaid vX.Y.Z."
   ```
   (Mention the published package version(s) too if they differ from the tag.)
   A docs issue without a release comment means *merged but not released — don't
@@ -240,7 +275,7 @@ To adopt it in another repo:
 2. Copy `scripts/worktree.mjs` and `CLAUDE.md` verbatim; copy this `AGENTS.md` as a template.
 3. Add `"wt": "node scripts/worktree.mjs"` to the repo's `package.json` scripts.
 4. Adapt the repo-specific sections of `AGENTS.md`: the intro (what the repo is),
-   "Build, Test, Lint", and "Packages". Replace every `<REPO>` with the repo name.
+   "Build, Test, Lint", and "Packages". Replace every `mermaid` with the repo name.
 5. Keep the workflow, worktree, and conventions sections as-is — they are the
    shared standard.
-6. Lock down `main`: `node scripts/apply-branch-protection.mjs signalxjs/<REPO>`.
+6. Lock down `main`: `node scripts/apply-branch-protection.mjs signalxjs/mermaid`.

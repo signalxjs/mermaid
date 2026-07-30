@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "strict": true,
+        "jsx": "react-jsx",
+        "jsxImportSource": "sigx",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "types": ["vitest/globals"],
+        "paths": {
+            "@sigx/mermaid": ["./packages/mermaid/src/index.ts"],
+            "@sigx/mermaid/client": ["./packages/mermaid/src/client.ts"],
+            "@sigx/mermaid/ssg": ["./packages/mermaid/src/ssg.ts"]
+        }
+    },
+    "exclude": ["node_modules", "**/dist"]
+}

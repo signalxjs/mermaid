@@ -1,0 +1,309 @@
+/**
+ * The rendering core, shared by the `<Mermaid>` component and the
+ * `@sigx/mermaid/client` progressive enhancer.
+ *
+ * mermaid is loaded lazily and exactly once: it drags in d3, cytoscape and
+ * katex, so a page with no diagrams must never pay for it. Everything here is
+ * browser-only — mermaid needs real text metrics (`getBBox`), which no
+ * server-side DOM shim implements faithfully.
+ */
+
+import {
+    getMermaidConfig,
+    mergeMermaidConfig,
+    resolveThemeVariables,
+    toSchemeTheme,
+    type MermaidOptions,
+    type MermaidSchemeTheme,
+    type MermaidThemes,
+    type MermaidThemeVariables,
+} from './config';
+
+/** The slice of mermaid's API this package uses. */
+interface MermaidApi {
+    initialize(config: Record<string, unknown>): void;
+    render(
+        id: string,
+        text: string,
+        container?: Element
+    ): Promise<{ svg: string; bindFunctions?: (element: Element) => void }>;
+}
+
+let mermaidPromise: Promise<MermaidApi> | null = null;
+
+/**
+ * Load mermaid, once. The in-flight promise is memoized (not just the result),
+ * so N diagrams entering the viewport in the same frame trigger one import
+ * rather than N.
+ */
+export function loadMermaid(): Promise<MermaidApi> {
+    if (!mermaidPromise) {
+        mermaidPromise = import('mermaid').then((m) => (m.default ?? m) as unknown as MermaidApi);
+    }
+    return mermaidPromise;
+}
+
+/** Drop the memoized loader. Exported for tests. */
+export function resetMermaidLoader(): void {
+    mermaidPromise = null;
+    renderQueue = Promise.resolve();
+    seq = 0;
+}
+
+/**
+ * The page's effective background colour — the first non-transparent one
+ * walking `<body>` then `<html>` — or null when nothing paints one (in which
+ * case the canvas is showing through and there is nothing useful to report).
+ */
+export function pageBackgroundColor(): string | null {
+    if (typeof document === 'undefined') return null;
+    try {
+        for (const element of [document.body, document.documentElement]) {
+            if (!element) continue;
+            const color = getComputedStyle(element).backgroundColor;
+            if (luminanceOf(color) !== null) return color;
+        }
+    } catch {
+        /* `getComputedStyle` is missing in some minimal DOM shims */
+    }
+    return null;
+}
+
+/** Perceived lightness of an `rgb()`/`rgba()` string, or null if unreadable. */
+function luminanceOf(color: string | undefined): number | null {
+    if (!color) return null;
+    const parts = /^rgba?\(([^)]+)\)/.exec(color);
+    if (!parts) return null;
+    const [r, g, b, a] = parts[1].split(/[,/\s]+/).filter(Boolean).map(Number);
+    // Fully transparent: this element contributes nothing, keep looking upward.
+    if (Number.isFinite(a) && a === 0) return null;
+    if (![r, g, b].every(Number.isFinite)) return null;
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+/**
+ * Detect the page's colour scheme, most explicit signal first:
+ *
+ * 1. an explicit `resolveColorScheme` option;
+ * 2. `data-theme="light|dark"` on `<html>` — the literal daisyUI/ssg values;
+ * 3. the *computed* `color-scheme` — daisyUI sets this per theme, so it
+ *    resolves named themes like `night` or `cupcake` that step 2 can't;
+ * 4. a `.dark` class on `<html>` — the Tailwind convention;
+ * 5. the page's actual background colour.
+ *
+ * Step 5 replaces the obvious `prefers-color-scheme` fallback, which is wrong
+ * often enough to matter: a page that has *not* opted into dark mode renders
+ * light no matter what the OS prefers, so keying off the OS puts a dark diagram
+ * on a white page. Reading the background instead answers the question that is
+ * actually being asked — "is this diagram about to sit on something dark?" —
+ * and it works whether the site themes itself with `data-theme`, a class, or a
+ * bare `@media (prefers-color-scheme: dark)` block that sets no `color-scheme`.
+ * A page with no background at all is canvas white, hence light.
+ */
+export function resolveColorScheme(options?: MermaidOptions): 'light' | 'dark' {
+    const override = options?.resolveColorScheme ?? getMermaidConfig().resolveColorScheme;
+    if (override) return override();
+    if (typeof document === 'undefined') return 'light';
+
+    const root = document.documentElement;
+
+    const dataTheme = root.getAttribute('data-theme');
+    if (dataTheme === 'dark' || dataTheme === 'light') return dataTheme;
+
+    // `getComputedStyle` is unavailable in some minimal DOM shims — never let
+    // detection throw, the diagram is more important than its palette.
+    try {
+        const scheme = getComputedStyle(root).colorScheme;
+        // `color-scheme: light dark` means "follow the system" — it is not a
+        // choice, so fall through rather than picking whichever is listed first.
+        if (scheme && scheme !== 'normal' && !(scheme.includes('light') && scheme.includes('dark'))) {
+            if (scheme.includes('dark')) return 'dark';
+            if (scheme.includes('light')) return 'light';
+        }
+    } catch {
+        /* fall through */
+    }
+
+    if (root.classList.contains('dark')) return 'dark';
+
+    try {
+        const luminance = luminanceOf(pageBackgroundColor() ?? undefined);
+        if (luminance !== null) return luminance < 0.5 ? 'dark' : 'light';
+    } catch {
+        /* fall through */
+    }
+
+    return 'light';
+}
+
+/** The appearance configured for the page's current colour scheme. */
+export function resolveSchemeTheme(options?: MermaidOptions): MermaidSchemeTheme {
+    // `getMermaidConfig().themes` is always complete; a per-call override may
+    // name only one scheme.
+    const themes: MermaidThemes = { ...getMermaidConfig().themes, ...options?.themes };
+    return toSchemeTheme(resolveColorScheme(options) === 'dark' ? themes.dark : themes.light);
+}
+
+/** The mermaid theme *name* for the page's current colour scheme. */
+export function resolveTheme(options?: MermaidOptions): string {
+    return resolveSchemeTheme(options).theme;
+}
+
+/**
+ * Theme variables this package supplies before anyone else gets a say. Sits at
+ * the bottom of the precedence chain, so every explicit setting overrides it.
+ *
+ * Only `edgeLabelBackground`, and only when the page's background can be read.
+ * mermaid hardcodes it to a light grey in every built-in theme including the
+ * dark ones, so an edge label lands as a highlighter smear across a dark
+ * diagram. The page background is the right value rather than `transparent`,
+ * because the chip's job is to occlude the line running underneath it.
+ *
+ * When no background is painted the canvas is white, which is what mermaid's
+ * own default already assumes — so leave it alone rather than guess.
+ */
+export function defaultThemeVariables(): MermaidThemeVariables {
+    const background = pageBackgroundColor();
+    return background ? { edgeLabelBackground: background } : {};
+}
+
+/**
+ * Everything that decides how a diagram looks, flattened to a comparable
+ * string. `watchTheme` re-renders when this changes.
+ *
+ * All three parts are needed, and the naive versions are each wrong:
+ *
+ * - **theme name alone** misses the common case entirely. Per-scheme variables
+ *   are normally written as `{ light: { theme: 'base', … }, dark: { theme:
+ *   'base', … } }` — same name in both schemes — so a light/dark flip would
+ *   look like no change at all.
+ * - **name + scheme** still misses a palette swap *within* a scheme: two light
+ *   daisyUI themes resolve to the same scheme and the same mermaid theme, but
+ *   `variables` reading CSS custom properties returns different colours.
+ *
+ * So the variables are resolved too. That means calling the `variables`
+ * function on each batched mutation, which is a `getComputedStyle` read or
+ * two — cheap, and it only happens once per frame at most.
+ */
+function themeSignature(): string {
+    const scheme = resolveSchemeTheme();
+    let variables = '';
+    try {
+        // Defaults included: `edgeLabelBackground` follows the page background,
+        // which can change without the scheme or theme name changing.
+        variables = JSON.stringify({ ...defaultThemeVariables(), ...resolveThemeVariables(scheme) });
+    } catch {
+        /* a throwing resolver shouldn't wedge the watcher */
+    }
+    return `${resolveColorScheme()}|${scheme.theme}|${variables}`;
+}
+
+/**
+ * Call `onChange` whenever the page's diagram appearance changes — a daisyUI
+ * `data-theme` flip, a Tailwind `.dark` toggle, or the OS switching schemes.
+ *
+ * Coalesced into one animation frame, since a theme toggle typically rewrites
+ * several attributes at once, and filtered on `themeSignature()` so a mutation
+ * that changes nothing a diagram can see costs nothing.
+ *
+ * Returns a disposer.
+ */
+export function watchTheme(onChange: (theme: string) => void): () => void {
+    if (typeof document === 'undefined') return () => {};
+
+    let pending = 0;
+    let last = themeSignature();
+
+    const check = (): void => {
+        if (pending) return;
+        pending = requestAnimationFrame(() => {
+            pending = 0;
+            const signature = themeSignature();
+            if (signature === last) return;
+            last = signature;
+            onChange(resolveTheme());
+        });
+    };
+
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme', 'class', 'style'],
+    });
+
+    const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
+    media?.addEventListener('change', check);
+
+    return () => {
+        observer.disconnect();
+        media?.removeEventListener('change', check);
+        if (pending) cancelAnimationFrame(pending);
+    };
+}
+
+let seq = 0;
+
+/**
+ * mermaid keeps its config in module-global state and `render()` mutates the
+ * document while it measures, so two concurrent renders can pick up each
+ * other's theme. Serialize them — rendering is fast, and diagrams arrive in
+ * viewport order anyway.
+ */
+let renderQueue: Promise<unknown> = Promise.resolve();
+
+export interface RenderResult {
+    svg: string;
+    /** Attaches mermaid's `click` interactions. Call it on the inserted node. */
+    bindFunctions?: (element: Element) => void;
+}
+
+/**
+ * Render one diagram to an SVG string. Rejects with mermaid's parse error if
+ * the source is invalid — callers are expected to surface it and leave the
+ * original source visible.
+ */
+export function renderDiagram(source: string, options?: MermaidOptions): Promise<RenderResult> {
+    const run = async (): Promise<RenderResult> => {
+        const mermaid = await loadMermaid();
+        const opts = getMermaidConfig();
+        const scheme = resolveSchemeTheme(options);
+
+        // Config precedence, lowest first: our own defaults, global `config`,
+        // per-call `config`, then the active scheme's `variables` — the most
+        // specific statement of "this is what the diagram should look like
+        // right now" wins. Variables merge at every step instead of replacing
+        // (mergeMermaidConfig), so a scheme that overrides one colour keeps
+        // the rest, and our defaults never clobber a caller's choice.
+        const config = [
+            opts.config,
+            options?.config,
+            { themeVariables: resolveThemeVariables(scheme) },
+        ].reduce<Record<string, unknown>>(
+            (acc, layer) => mergeMermaidConfig(acc, layer),
+            { themeVariables: defaultThemeVariables() }
+        );
+
+        mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: options?.securityLevel ?? opts.securityLevel,
+            theme: scheme.theme,
+            ...config,
+        });
+
+        const id = `sigx-mermaid-${++seq}`;
+        try {
+            return await mermaid.render(id, source);
+        } finally {
+            // A failed render leaves mermaid's measuring node parked in the
+            // body; without this the page accumulates one orphan per bad
+            // diagram (and the id collides on a re-theme re-render).
+            document.getElementById(id)?.remove();
+            document.getElementById(`d${id}`)?.remove();
+        }
+    };
+
+    const result = renderQueue.then(run, run);
+    // Keep the chain alive after a rejection, but don't leave it unhandled.
+    renderQueue = result.catch(() => undefined);
+    return result;
+}
