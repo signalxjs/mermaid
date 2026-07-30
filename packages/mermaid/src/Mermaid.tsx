@@ -9,25 +9,34 @@
  * or a syntax error) still shows its definition instead of a blank frame.
  */
 
-import { component, onUnmounted, watch } from 'sigx';
+import { component, mergeProps, onUnmounted, watch, type Define } from 'sigx';
 import { renderDiagram, watchTheme } from './render';
 import type { MermaidOptions } from './config';
 
-export interface MermaidProps {
+/**
+ * Props are declared with `Define.*` rather than a plain interface so the
+ * framework can see which are the component's own and which are host
+ * attributes.
+ *
+ * `WithAttrs` because the figure forwards everything it doesn't consume — `id`,
+ * `style`, `data-*`, `aria-*`, DOM event handlers — and because `title` is
+ * exactly the collision it exists for: here it is a caption, not the HTML
+ * tooltip attribute, so the component's own declaration has to win.
+ *
+ * Declaring `Attrs` is a promise to actually forward them; see `mergeProps`
+ * below. A type that accepts an attribute and then drops it is the failure mode
+ * the opt-in exists to prevent.
+ */
+export type MermaidProps = Define.WithAttrs<
     /** The diagram definition, e.g. `graph TD; A-->B;`. */
-    code: string;
+    & Define.Prop<'code', string, true>
     /** Rendered as a `<figcaption>` and used as the SVG's accessible name. */
-    title?: string;
-    /** Extra classes on the `<figure>`. */
-    class?: string;
+    & Define.Prop<'title', string>
     /** Per-instance overrides, merged over the global `configureMermaid()` options. */
-    options?: MermaidOptions;
-    /**
-     * Render on mount instead of waiting for the figure to scroll into view.
-     * @default false
-     */
-    eager?: boolean;
-}
+    & Define.Prop<'options', MermaidOptions>
+    /** Render on mount instead of waiting for the figure to scroll into view. */
+    & Define.Prop<'eager', boolean>
+>;
 
 export default component<MermaidProps>(({ props, signal, onMounted }) => {
     const state = signal<{ svg: string; error: string | null }>({ svg: '', error: null });
@@ -102,16 +111,32 @@ export default component<MermaidProps>(({ props, signal, onMounted }) => {
         unwatchTheme = null;
     });
 
+    /**
+     * Everything the component doesn't consume lands on the `<figure>` — `id`,
+     * `style`, `data-*`, `aria-*`, event handlers. `mergeProps` composes `class`
+     * rather than letting either side win, so a caller's class is added to
+     * `sigx-mermaid` instead of replacing it.
+     *
+     * `title` is stripped deliberately: it is this component's caption prop, and
+     * forwarding it would also set the HTML tooltip attribute on the figure.
+     */
+    const figureProps = mergeProps(
+        () => {
+            const { code: _code, title: _title, options: _options, eager: _eager, ...rest } = props;
+            return rest;
+        },
+        () => ({
+            class: 'sigx-mermaid',
+            'data-mermaid-state': state.error ? 'error' : state.svg ? 'ready' : 'pending',
+            ref: (el: HTMLElement | null) => {
+                figure = el;
+            },
+        })
+    );
+
     return () => {
-        const status = state.error ? 'error' : state.svg ? 'ready' : 'pending';
         return (
-            <figure
-                class={`sigx-mermaid${props.class ? ` ${props.class}` : ''}`}
-                data-mermaid-state={status}
-                ref={(el: HTMLElement | null) => {
-                    figure = el;
-                }}
-            >
+            <figure {...figureProps}>
                 <pre class="sigx-mermaid-source" hidden={Boolean(state.svg)}>
                     <code>{props.code}</code>
                 </pre>

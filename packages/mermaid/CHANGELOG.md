@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `prefers-color-scheme` is deliberately **not** consulted: a page that has not
   opted into dark mode renders light whatever the OS prefers, and keying off the
   OS put mermaid's dark theme (black nodes) on a white page.
+- `<Mermaid>` accepts and forwards host attributes (`id`, `class`, `style`,
+  `data-*`, `aria-*`, event handlers) onto the `<figure>`, with `class`
+  composed rather than replaced. `title` stays the caption prop and is not
+  forwarded. Props are declared with `Define.WithAttrs` / `Define.Prop`.
 - `configureMermaid()` for global themes, `securityLevel` (default `'strict'`)
   and arbitrary mermaid config.
 - Per-scheme theming: each scheme takes a mermaid theme name or
