@@ -66,6 +66,15 @@ source visible with `data-mermaid-state="error"`.
 
 `data-mermaid-state` moves `pending` → `ready` | `error`; style against it.
 
+The attribute is **absent from the SSR output** and appears only once the client
+claims the figure. That is deliberate: `pending` means "JavaScript has this and
+is working on it", which is a claim the server cannot make. Emitting `pending`
+statically would leave a reader with no JavaScript looking at a box that says it
+is loading forever — and any CSS reserving space for it would hold that space
+open permanently. With no attribute, the source `<pre>` is simply visible, which
+is the correct no-JS presentation. Style the absent case with
+`.sigx-mermaid:not([data-mermaid-state])` if you need to.
+
 ### Without the rehype plugin
 
 The plugin is optional. `@sigx/mermaid/client` also claims a bare

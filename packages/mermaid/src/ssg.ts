@@ -143,6 +143,11 @@ export function rehypeMermaid(options: RehypeMermaidOptions = {}) {
                 });
             }
 
+            // Deliberately no `data-mermaid-state`: the client sets it when it
+            // claims the figure. `pending` is a statement about JavaScript
+            // being on the case, which the server cannot make — emitted
+            // statically it would tell a no-JS reader the diagram is loading
+            // forever, and hold open any space reserved for it.
             const figure: HastElement = {
                 type: 'element',
                 tagName: 'figure',
