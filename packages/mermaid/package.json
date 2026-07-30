@@ -1,0 +1,69 @@
+{
+    "name": "@sigx/mermaid",
+    "version": "0.1.0",
+    "description": "Mermaid diagrams for sigx — a <Mermaid> component plus lazy, theme-aware progressive enhancement for @sigx/ssg code fences",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./client": {
+            "types": "./dist/client.d.ts",
+            "import": "./dist/client.js"
+        },
+        "./ssg": {
+            "types": "./dist/ssg.d.ts",
+            "import": "./dist/ssg.js"
+        },
+        "./styles": "./styles.css",
+        "./styles.css": "./styles.css",
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "dist",
+        "styles.css"
+    ],
+    "sideEffects": [
+        "./dist/client.js",
+        "*.css"
+    ],
+    "scripts": {
+        "build": "tsgo",
+        "dev": "tsgo --watch"
+    },
+    "keywords": [
+        "sigx",
+        "signalx",
+        "mermaid",
+        "diagram",
+        "flowchart",
+        "ssg",
+        "rehype"
+    ],
+    "author": "Andreas Ekdahl",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/signalxjs/mermaid.git",
+        "directory": "packages/mermaid"
+    },
+    "homepage": "https://sigx.dev/",
+    "bugs": {
+        "url": "https://github.com/signalxjs/mermaid/issues"
+    },
+    "peerDependencies": {
+        "mermaid": ">=11.0.0",
+        "sigx": "catalog:"
+    },
+    "devDependencies": {
+        "mermaid": "^11.16.0",
+        "sigx": "catalog:",
+        "typescript": "^6.0.3"
+    },
+    "publishConfig": {
+        "access": "public"
+    }
+}

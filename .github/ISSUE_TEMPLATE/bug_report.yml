@@ -17,15 +17,16 @@ body:
     validations:
       required: true
 
-  # TODO(sigx-standard): list this repo's packages, or delete this dropdown if
-  # the repo ships a single package.
   - type: dropdown
-    id: packages
+    id: entrypoint
     attributes:
-      label: Affected package(s)
+      label: Which entry point?
       multiple: true
       options:
-        - "@sigx/<package>"
+        - "@sigx/mermaid (the <Mermaid> component)"
+        - "@sigx/mermaid/client (fence enhancement)"
+        - "@sigx/mermaid/ssg (rehypeMermaid)"
+        - "@sigx/mermaid/styles"
         - Not sure / multiple
     validations:
       required: true

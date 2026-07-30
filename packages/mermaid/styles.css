@@ -1,0 +1,100 @@
+/**
+ * @sigx/mermaid — presentation only.
+ *
+ * Everything functional (hiding the source once the SVG lands, error state)
+ * is done in JS with the `hidden` attribute, so a page that never imports this
+ * file still behaves correctly — it just looks plainer.
+ *
+ * Override any of the custom properties below on `.sigx-mermaid` or a
+ * container; they are the whole theming surface.
+ */
+
+.sigx-mermaid {
+    --sigx-mermaid-gap: 0.75rem;
+    --sigx-mermaid-radius: 0.5rem;
+    --sigx-mermaid-padding: 1rem;
+    --sigx-mermaid-bg: transparent;
+    --sigx-mermaid-border: color-mix(in srgb, currentColor 12%, transparent);
+    --sigx-mermaid-muted: color-mix(in srgb, currentColor 65%, transparent);
+    --sigx-mermaid-error: #dc2626;
+    --sigx-mermaid-min-height: 6rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--sigx-mermaid-gap);
+    margin: 1.5rem 0;
+}
+
+.sigx-mermaid-output {
+    display: flex;
+    justify-content: center;
+    padding: var(--sigx-mermaid-padding);
+    background: var(--sigx-mermaid-bg);
+    border: 1px solid var(--sigx-mermaid-border);
+    border-radius: var(--sigx-mermaid-radius);
+    /* Wide diagrams scroll inside their own box — the page must never scroll
+       sideways because of one flowchart. */
+    overflow-x: auto;
+}
+
+.sigx-mermaid-output > svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Hold the box open between "claimed" and "rendered" so the page doesn't jump
+   when the SVG arrives. Only applies while pending — a rendered diagram is
+   sized by its own SVG. */
+.sigx-mermaid[data-mermaid-state='pending'] .sigx-mermaid-output {
+    min-height: var(--sigx-mermaid-min-height);
+}
+
+.sigx-mermaid-caption {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--sigx-mermaid-muted);
+}
+
+.sigx-mermaid-source {
+    overflow-x: auto;
+    padding: var(--sigx-mermaid-padding);
+    background: var(--sigx-mermaid-bg);
+    border: 1px solid var(--sigx-mermaid-border);
+    border-radius: var(--sigx-mermaid-radius);
+    font-size: 0.875rem;
+}
+
+/* A diagram that failed to parse: the source stays visible above the message,
+   which is the only thing that makes the failure actionable for the author. */
+.sigx-mermaid[data-mermaid-state='error'] .sigx-mermaid-source {
+    border-color: var(--sigx-mermaid-error);
+}
+
+.sigx-mermaid-error,
+.sigx-mermaid[data-mermaid-state='error'] .sigx-mermaid-output {
+    padding: var(--sigx-mermaid-padding);
+    border: 1px solid var(--sigx-mermaid-error);
+    border-radius: var(--sigx-mermaid-radius);
+    color: var(--sigx-mermaid-error);
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    /* The error text is a message, not a diagram — undo the centring. */
+    display: block;
+    text-align: left;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .sigx-mermaid[data-mermaid-state='ready'] .sigx-mermaid-output > svg {
+        animation: sigx-mermaid-fade-in 150ms ease-out;
+    }
+}
+
+@keyframes sigx-mermaid-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

@@ -1,0 +1,24 @@
+{
+    "name": "@sigx-examples/mermaid-basic",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Minimal @sigx/ssg site wired up with @sigx/mermaid. Also built by the e2e test in packages/mermaid.",
+    "scripts": {
+        "dev": "vite",
+        "build:site": "node build.mjs",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@sigx/mermaid": "workspace:^",
+        "@sigx/router": "catalog:",
+        "@sigx/server-renderer": "catalog:",
+        "@sigx/ssg": "catalog:",
+        "mermaid": "^11.16.0",
+        "sigx": "catalog:"
+    },
+    "devDependencies": {
+        "@sigx/vite": "catalog:",
+        "vite": "^8.0.3"
+    }
+}

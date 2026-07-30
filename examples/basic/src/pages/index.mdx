@@ -1,0 +1,50 @@
+---
+title: Diagrams
+description: Mermaid fences rendered by @sigx/mermaid
+---
+
+# Diagrams
+
+Every fenced block below is a plain ` ```mermaid ` fence in the MDX source. The
+build leaves the source in the HTML; `@sigx/mermaid/client` swaps in an SVG once
+the diagram scrolls into view.
+
+## Flowchart
+
+```mermaid title="Build pipeline"
+graph LR
+  MDX[MDX fence] --> Shiki{shiki}
+  Shiki -->|skipLanguages| Rehype[rehypeMermaid]
+  Rehype --> Figure[figure.sigx-mermaid]
+  Figure --> Client[client enhancer]
+  Client --> SVG[SVG]
+```
+
+## Sequence
+
+```mermaid
+sequenceDiagram
+  participant Page
+  participant Client as "@sigx/mermaid/client"
+  participant Mermaid
+  Page->>Client: figure scrolls into view
+  Client->>Mermaid: import('mermaid')
+  Mermaid-->>Client: svg
+  Client->>Page: insert as sibling, hide source
+```
+
+## A code fence that is *not* a diagram
+
+Shiki still owns every other language — `skipLanguages` only takes `mermaid`
+out of its hands.
+
+```ts
+export default defineSSGConfig({
+    markdown: {
+        shiki: { skipLanguages: ['mermaid'] },
+        rehypePlugins: [rehypeMermaid],
+    },
+});
+```
+
+[Second page](/second/) — used by the e2e test to check SPA navigation.
