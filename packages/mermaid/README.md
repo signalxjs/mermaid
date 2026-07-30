@@ -28,11 +28,22 @@ import { Mermaid } from '@sigx/mermaid';
 
 | Prop | Type | Description |
 | --- | --- | --- |
-| `code` | `string` | The diagram definition. Required. |
+| `code` | `string` | The diagram definition. **Required.** |
 | `title` | `string` | Rendered as a `<figcaption>` and the SVG's accessible name. |
-| `class` | `string` | Extra classes on the `<figure>`. |
 | `options` | `MermaidOptions` | Per-instance overrides, merged over the global config. |
 | `eager` | `boolean` | Render on mount instead of on scroll-into-view. Default `false`. |
+
+Anything else you pass lands on the `<figure>` — `id`, `class`, `style`,
+`data-*`, `aria-*`, DOM event handlers. `class` is composed with the
+component's own rather than replacing it:
+
+```tsx
+<Mermaid code={source} id="architecture" class="my-diagram" data-testid="arch" />
+// → <figure class="sigx-mermaid my-diagram" id="architecture" data-testid="arch" …>
+```
+
+`title` is the exception: it is this component's caption, so it is *not*
+forwarded as the HTML tooltip attribute.
 
 The diagram source is emitted as a `<pre>` and only hidden once the SVG lands,
 so a diagram that has not rendered — no JavaScript yet, or a syntax error —

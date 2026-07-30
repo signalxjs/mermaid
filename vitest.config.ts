@@ -1,6 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import { resolve } from 'node:path';
 
+// `import.meta.dirname`, not `__dirname`: Vite's current config loader injects
+// `__dirname`, but the `native` loader — slated to become the default — does
+// not, and warns about it today.
+const dirname = import.meta.dirname;
+
 // JSX must compile to the sigx automatic runtime (the same settings the library
 // build uses), so tests can import the TSX component.
 export default defineConfig({
@@ -20,7 +25,7 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@sigx/mermaid': resolve(__dirname, 'packages/mermaid/src/index.ts'),
+            '@sigx/mermaid': resolve(dirname, 'packages/mermaid/src/index.ts'),
         },
     },
 });

@@ -6,7 +6,7 @@ onlyBuiltDependencies:
   - esbuild
 
 # Single source of truth for the SignalX core version this repo builds against.
-# `^0.13.0` == `>=0.13.0 <0.14.0` (ONE minor).
+# `^0.14.0` == `>=0.14.0 <0.15.0` (ONE minor).
 # @sigx/reactivity keeps reactive state in module-local variables, so two physical
 # copies silently split core's singletons and break reactivity; the single-minor
 # range forces pnpm to hoist ONE copy. Bump this one block to move the whole repo
@@ -15,13 +15,22 @@ onlyBuiltDependencies:
 #
 # @sigx/router and @sigx/ssg are SIBLINGS, not core: they track their own release
 # lines and `pnpm sync:core` does not touch them, so bump them by hand to the
-# releases aligned with the same core minor as the entries above. They are only
-# needed by examples/. The core line here is therefore not the newest one —
-# it is whatever the *released* @sigx/ssg peers (0.18.0 peers core ^0.13.0 /
-# router ^0.10.0); moving ahead of it would make every example install warn.
+# releases aligned with the same core minor as the entries above.
+#
+# NOTE: this repo is deliberately AHEAD of the released @sigx/ssg, which is an
+# examples-only dependency. @sigx/ssg@0.18.0 declares peers on core ^0.13.0 and
+# @sigx/router ^0.10.0; we resolve 0.14 and 0.11. That mismatch is intentional:
+# @sigx/mermaid itself peers only `sigx`, and core 0.14 is what provides
+# `Define.Attrs` / `mergeProps` — the host-attribute opt-in the component is
+# typed against. ssg's own main is already aligned to core 0.14, so the
+# declaration catches up when it releases; nothing here needs to change then.
+#
+# The invariant that must NOT regress is one physical copy of the runtime:
+# `pnpm why -r @sigx/reactivity` has to report exactly one version, or reactive
+# state silently splits. Verified after every change to this block.
 catalog:
-  sigx: ^0.13.0
-  '@sigx/vite': ^0.13.0
-  '@sigx/server-renderer': ^0.13.0
-  '@sigx/router': ^0.10.0
+  sigx: ^0.14.0
+  '@sigx/vite': ^0.14.0
+  '@sigx/server-renderer': ^0.14.0
+  '@sigx/router': ^0.11.0
   '@sigx/ssg': ^0.18.0
