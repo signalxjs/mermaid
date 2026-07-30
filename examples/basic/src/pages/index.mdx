@@ -5,46 +5,66 @@ description: Mermaid fences rendered by @sigx/mermaid
 
 # Diagrams
 
-Every fenced block below is a plain ` ```mermaid ` fence in the MDX source. The
-build leaves the source in the HTML; `@sigx/mermaid/client` swaps in an SVG once
-the diagram scrolls into view.
+Every block below is a plain ` ```mermaid ` fence in the MDX source. The build
+leaves the source in the HTML; `@sigx/mermaid/client` swaps in an SVG once the
+diagram scrolls into view.
 
 ## Flowchart
 
-```mermaid title="Build pipeline"
+```mermaid title="Checkout"
 graph LR
-  MDX[MDX fence] --> Shiki{shiki}
-  Shiki -->|skipLanguages| Rehype[rehypeMermaid]
-  Rehype --> Figure[figure.sigx-mermaid]
-  Figure --> Client[client enhancer]
-  Client --> SVG[SVG]
+  Cart --> Address
+  Address --> Payment
+  Payment -->|authorised| Confirm
+  Payment -->|declined| Address
+  Confirm --> Done([Order placed])
 ```
 
 ## Sequence
 
 ```mermaid
 sequenceDiagram
-  participant Page
-  participant Client as "@sigx/mermaid/client"
-  participant Mermaid
-  Page->>Client: figure scrolls into view
-  Client->>Mermaid: import('mermaid')
-  Mermaid-->>Client: svg
-  Client->>Page: insert as sibling, hide source
+  participant Browser
+  participant CDN
+  participant Origin
+  Browser->>CDN: GET /orders/42
+  CDN-->>Browser: 304 Not Modified
+  Browser->>Origin: POST /orders/42/pay
+  Origin-->>Browser: 202 Accepted
 ```
 
-## A code fence that is *not* a diagram
+## State
 
-Shiki still owns every other language — `skipLanguages` only takes `mermaid`
-out of its hands.
+```mermaid title="Order lifecycle"
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> Placed: submit
+  Placed --> Shipped: dispatch
+  Placed --> Cancelled: cancel
+  Shipped --> [*]
+  Cancelled --> [*]
+```
+
+## Pie
+
+```mermaid
+pie title Traffic by source
+  "Organic" : 52
+  "Referral" : 27
+  "Direct" : 21
+```
+
+## Other fences are left alone
+
+`rehypeMermaid` claims `language-mermaid` and nothing else — this block renders
+however the site normally renders code.
 
 ```ts
-export default defineSSGConfig({
-    markdown: {
-        shiki: { skipLanguages: ['mermaid'] },
-        rehypePlugins: [rehypeMermaid],
-    },
-});
+import { Mermaid } from '@sigx/mermaid';
+
+export function Architecture() {
+    return <Mermaid code="graph LR; Client-->API-->DB;" title="Services" />;
+}
 ```
 
 [Second page](/second/) — used by the e2e test to check SPA navigation.

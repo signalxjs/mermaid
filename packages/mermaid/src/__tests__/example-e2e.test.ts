@@ -54,26 +54,29 @@ describe.skipIf(!distBuilt)('examples/basic — end-to-end production build', ()
     it('keeps the diagram source in the HTML as the no-JS fallback', () => {
         // Escaped, because it went through MDX and the SSR serializer — this is
         // the text the client enhancer reads back out.
-        expect(home).toContain('Shiki --&gt;|skipLanguages| Rehype[rehypeMermaid]');
+        expect(home).toContain('Payment --&gt;|authorised| Confirm');
     });
 
     it('lifts the fence `title=` meta into a caption', () => {
-        expect(home).toContain('<figcaption class="sigx-mermaid-caption">Build pipeline</figcaption>');
-        expect(home).toContain('data-mermaid-title="Build pipeline"');
+        expect(home).toContain('<figcaption class="sigx-mermaid-caption">Checkout</figcaption>');
+        expect(home).toContain('data-mermaid-title="Checkout"');
+        // …and a fence without the meta gets none.
+        expect(home.match(/sigx-mermaid-caption/g)?.length).toBe(2);
     });
 
-    it('leaves shiki in charge of every other language', () => {
-        // The .ts fence on the same page still gets the full ssg code-window
-        // treatment; only `mermaid` was taken out of shiki's hands.
+    it('claims mermaid fences and nothing else', () => {
+        // The page also has a .ts fence. It must come out untouched by us and
+        // fully rendered by whatever the site uses for code — proof the plugin
+        // does not over-claim.
         expect(home).toContain('code-window');
-        // …and the mermaid fence did not get it.
         const figure = /<figure class="sigx-mermaid"[\s\S]*?<\/figure>/.exec(home)?.[0] ?? '';
         expect(figure).not.toContain('code-window');
         expect(figure).not.toContain('language-mermaid');
     });
 
     it('renders every diagram on a page, and on other pages', () => {
-        expect(home.match(/data-sigx-mermaid/g)?.length).toBe(2);
+        // flowchart + sequence + state + pie — but not the .ts fence.
+        expect(home.match(/data-sigx-mermaid/g)?.length).toBe(4);
         expect(second).toContain('data-sigx-mermaid');
     });
 
