@@ -202,13 +202,14 @@ export type {
 export { installMermaid, uninstallMermaid, type MermaidClientOptions };
 
 // @sigx/mermaid/ssg   — see docs/ssg.md
-export { rehypeMermaid, mermaidThemeContribution, type RehypeMermaidOptions };
+export { remarkMermaid, rehypeMermaid, mermaidThemeContribution };
+export type { RemarkMermaidOptions, RehypeMermaidOptions };
 ```
 
 ## Integrations
 
 - **[Static sites with `@sigx/ssg`](./docs/ssg.md)** — render ```` ```mermaid ````
-  fences in MDX. Adds `@sigx/mermaid/ssg` (a rehype plugin) and
+  fences in MDX. Adds `@sigx/mermaid/ssg` (markdown-pipeline plugins) and
   `@sigx/mermaid/client` (progressive enhancement) to the above.
 
 ## License

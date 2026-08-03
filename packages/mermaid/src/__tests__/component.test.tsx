@@ -31,7 +31,7 @@ describe('<Mermaid>', () => {
 
         const figure = host.querySelector<HTMLElement>('figure.sigx-mermaid')!;
         expect(figure.getAttribute('data-mermaid-state')).toBe('pending');
-        expect(figure.querySelector('.sigx-mermaid-source code')!.textContent).toBe('graph TD; A-->B;');
+        expect(figure.querySelector('.sigx-mermaid-source')!.textContent).toBe('graph TD; A-->B;');
     });
 
     it('forwards host attributes onto the figure', async () => {

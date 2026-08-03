@@ -1,36 +1,41 @@
 /**
- * `@sigx/ssg` integration — a rehype plugin that turns a ` ```mermaid ` fence
- * into an accessible, client-enhanceable shell.
+ * Markdown-pipeline plugins that turn a ` ```mermaid ` fence into an
+ * accessible, client-enhanceable shell — the `<figure data-sigx-mermaid>` that
+ * `@sigx/mermaid/client` later upgrades to an SVG.
  *
- * This works because `@sigx/ssg` leaves the seam open on purpose:
- * `markdown.shiki.skipLanguages` makes the highlighter skip a language, so the
- * raw `<pre><code class="language-mermaid">` survives, and site-supplied
- * `rehypePlugins` run *after* shiki — so this plugin sees it.
+ * Two plugins, one emitted shell. They differ only in which stage of the
+ * pipeline hands them the tree:
+ *
+ * - `remarkMermaid` runs on the **markdown** tree (mdast). It claims the fence
+ *   before HTML conversion, so nothing downstream of it ever sees the fence.
+ * - `rehypeMermaid` runs on the **HTML** tree (hast). It claims whatever
+ *   `<pre><code class="language-mermaid">` is still in the tree when it runs —
+ *   what reaches it is decided by the plugins ordered before it.
+ *
+ * With `@sigx/ssg`:
  *
  * ```ts
  * // ssg.config.ts
- * import { rehypeMermaid } from '@sigx/mermaid/ssg';
+ * import { remarkMermaid } from '@sigx/mermaid/ssg';
  *
  * export default defineSSGConfig({
- *   markdown: {
- *     shiki: { skipLanguages: ['mermaid'] },
- *     rehypePlugins: [rehypeMermaid],
- *   },
+ *   markdown: { remarkPlugins: [remarkMermaid] },
  *   clientImports: ['@sigx/mermaid/styles', '@sigx/mermaid/client'],
  * });
  * ```
  *
- * The plugin is optional: `@sigx/mermaid/client` also claims a bare
+ * The plugins are optional: `@sigx/mermaid/client` also claims a bare
  * `pre > code.language-mermaid`. What the shell adds is a stable class hook, a
  * `<figcaption>` from the fence's `title=` meta, and a reserved box so the page
  * doesn't jump when the SVG lands.
  *
- * It does **not** render anything. Build-time SVG needs real text metrics
+ * Neither plugin renders anything. Build-time SVG needs real text metrics
  * (`getBBox`), which means a headless browser — see the README.
  */
 
-// Minimal structural hast types. Depending on `@types/hast` would leak a type
-// dependency into consumers' `.d.ts` resolution for a tree this simple.
+// Minimal structural hast/mdast types. Depending on `@types/hast` or
+// `@types/mdast` would leak a type dependency into consumers' `.d.ts`
+// resolution for trees this simple.
 interface HastText {
     type: 'text';
     value: string;
@@ -50,10 +55,32 @@ interface HastParent {
     children: HastNode[];
 }
 
+interface MdastCode {
+    type: 'code';
+    lang?: string | null;
+    meta?: string | null;
+    value: string;
+    data?: {
+        hName?: string;
+        hProperties?: Record<string, unknown>;
+        hChildren?: HastNode[];
+        [key: string]: unknown;
+    };
+}
+
+type MdastNode = MdastCode | { type: string; children?: MdastNode[] };
+
+export interface RemarkMermaidOptions {
+    /** Fence language this plugin claims. @default 'mermaid' */
+    language?: string;
+    /** Class on the emitted `<figure>`. @default 'sigx-mermaid' */
+    className?: string;
+}
+
 export interface RehypeMermaidOptions {
     /**
-     * Fence language this plugin claims. Must also appear in
-     * `markdown.shiki.skipLanguages`, or shiki gets there first.
+     * Fence language this plugin claims — matched as `language-<language>` on
+     * the `<code>`, which must still be present when the plugin runs.
      * @default 'mermaid'
      */
     language?: string;
@@ -89,7 +116,58 @@ function titleFromMeta(meta: string | null | undefined): string | null {
     return match ? (match[1] ?? match[2] ?? null) : null;
 }
 
-/** Depth-first walk that lets the visitor replace a node in its parent. */
+/**
+ * The figure shell both plugins emit, built in one place so the two stages
+ * stay byte-identical: `properties` for the `<figure>` itself, `children` for
+ * the source `<pre>` and the optional `<figcaption>`.
+ *
+ * Deliberately no `data-mermaid-state`: the client sets it when it claims the
+ * figure. `pending` is a statement about JavaScript being on the case, which
+ * the build cannot make — emitted statically it would tell a no-JS reader the
+ * diagram is loading forever, and hold open any space reserved for it.
+ */
+function figureParts(
+    source: string,
+    title: string | null,
+    className: string
+): { properties: Record<string, unknown>; children: HastNode[] } {
+    // The source is a bare `<pre>`, deliberately not `<pre><code>`: the shell
+    // must never look like a markdown fence, or downstream fence tooling in
+    // the same pipeline mistakes the embedded source for a code block and
+    // claims it out of the figure.
+    const children: HastNode[] = [
+        {
+            type: 'element',
+            tagName: 'pre',
+            properties: { className: ['sigx-mermaid-source'] },
+            children: [{ type: 'text', value: source }],
+        },
+    ];
+    if (title) {
+        children.push({
+            type: 'element',
+            tagName: 'figcaption',
+            properties: { className: ['sigx-mermaid-caption'] },
+            children: [{ type: 'text', value: title }],
+        });
+    }
+
+    const properties: Record<string, unknown> = {
+        className: [className],
+        'data-sigx-mermaid': '',
+        ...(title ? { 'data-mermaid-title': title } : {}),
+    };
+    return { properties, children };
+}
+
+/** Pre-order mdast walk; the visitor mutates nodes in place. */
+function walkMdast(node: MdastNode, visit: (n: MdastNode) => void): void {
+    visit(node);
+    const children = (node as { children?: MdastNode[] }).children;
+    if (children) for (const child of children) walkMdast(child, visit);
+}
+
+/** Depth-first hast walk that lets the visitor replace a node in its parent. */
 function walk(node: HastNode, parent: HastParent | null, visit: (n: HastNode, p: HastParent | null) => void): void {
     const children = (node as HastElement).children;
     if (children) {
@@ -101,7 +179,37 @@ function walk(node: HastNode, parent: HastParent | null, visit: (n: HastNode, p:
 }
 
 /**
- * Rehype plugin. Usable bare (`rehypePlugins: [rehypeMermaid]`) or configured
+ * remark plugin — claims fences on the markdown tree. Usable bare
+ * (`remarkPlugins: [remarkMermaid]`) or configured
+ * (`remarkPlugins: [[remarkMermaid, { language: 'mmd' }]]`).
+ *
+ * The claim is expressed through the node's `data.hName` / `hProperties` /
+ * `hChildren`, the mdast-to-hast contract every remark-based pipeline honours,
+ * so the HTML stage emits the figure shell instead of a `<pre><code>`.
+ */
+export function remarkMermaid(options: RemarkMermaidOptions = {}) {
+    const language = options.language ?? 'mermaid';
+    const className = options.className ?? 'sigx-mermaid';
+
+    return function transformer(tree: MdastNode): void {
+        walkMdast(tree, (node) => {
+            if (node.type !== 'code') return;
+            const code = node as MdastCode;
+            if (code.lang !== language) return;
+
+            const title = titleFromMeta(code.meta);
+            // `value` is the fence body exactly — no trailing newline — and
+            // `hChildren` bypasses the default code handler that would append
+            // one, so the shell matches the rehype plugin's byte for byte.
+            const { properties, children } = figureParts(code.value, title, className);
+            code.data = { ...code.data, hName: 'figure', hProperties: properties, hChildren: children };
+        });
+    };
+}
+
+/**
+ * rehype plugin — claims fences on the HTML tree. Usable bare
+ * (`rehypePlugins: [rehypeMermaid]`) or configured
  * (`rehypePlugins: [[rehypeMermaid, { language: 'mmd' }]]`).
  */
 export function rehypeMermaid(options: RehypeMermaidOptions = {}) {
@@ -116,48 +224,14 @@ export function rehypeMermaid(options: RehypeMermaidOptions = {}) {
             const code = node.children.find((child) => isElement(child) && child.tagName === 'code');
             if (!code || !isElement(code) || !classList(code).includes(languageClass)) return;
 
+            // Strip the trailing newline the HTML stage appends to a fence —
+            // it would show as a blank line in the fallback, and mermaid does
+            // not need it.
             const source = textOf(code).replace(/\n$/, '');
             const title = titleFromMeta(code.data?.meta);
 
-            const pre: HastElement = {
-                type: 'element',
-                tagName: 'pre',
-                properties: { className: ['sigx-mermaid-source'] },
-                children: [
-                    {
-                        type: 'element',
-                        tagName: 'code',
-                        properties: {},
-                        children: [{ type: 'text', value: source }],
-                    },
-                ],
-            };
-
-            const children: HastNode[] = [pre];
-            if (title) {
-                children.push({
-                    type: 'element',
-                    tagName: 'figcaption',
-                    properties: { className: ['sigx-mermaid-caption'] },
-                    children: [{ type: 'text', value: title }],
-                });
-            }
-
-            // Deliberately no `data-mermaid-state`: the client sets it when it
-            // claims the figure. `pending` is a statement about JavaScript
-            // being on the case, which the server cannot make — emitted
-            // statically it would tell a no-JS reader the diagram is loading
-            // forever, and hold open any space reserved for it.
-            const figure: HastElement = {
-                type: 'element',
-                tagName: 'figure',
-                properties: {
-                    className: [className],
-                    'data-sigx-mermaid': '',
-                    ...(title ? { 'data-mermaid-title': title } : {}),
-                },
-                children,
-            };
+            const { properties, children } = figureParts(source, title, className);
+            const figure: HastElement = { type: 'element', tagName: 'figure', properties, children };
 
             const index = parent.children.indexOf(node);
             if (index !== -1) parent.children[index] = figure;
@@ -167,14 +241,12 @@ export function rehypeMermaid(options: RehypeMermaidOptions = {}) {
 
 /**
  * Drop-in contribution for an `@sigx/ssg` **theme** — spread into the theme's
- * `ThemeConfig` and every site using that theme gets diagrams. `applyThemeConfig`
- * merges `markdown.rehypePlugins` and prepends `css` to `clientImports`.
- *
- * Note the caller still owns `markdown.shiki.skipLanguages`: a theme cannot
- * contribute it, because `ThemeConfig.markdown` only carries plugin arrays.
+ * `ThemeConfig` and every site using that theme gets diagrams, no site-level
+ * configuration required. `applyThemeConfig` merges `markdown.remarkPlugins`
+ * and prepends `css` to `clientImports`.
  */
 export const mermaidThemeContribution = {
-    markdown: { rehypePlugins: [rehypeMermaid] },
+    markdown: { remarkPlugins: [remarkMermaid] },
     css: ['@sigx/mermaid/styles', '@sigx/mermaid/client'],
 } as const;
 

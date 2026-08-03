@@ -41,8 +41,8 @@ view. Three rules follow from that and should not be broken casually:
 - **mermaid must stay out of the entry chunk.** It drags in d3, cytoscape and
   katex; a page with no diagrams must not pay for it. The e2e test asserts this.
 
-`@sigx/ssg` needs no changes to support any of it — `markdown.shiki.skipLanguages`
-and site `rehypePlugins` were already the documented seam.
+`@sigx/ssg` needs no changes to support any of it — site `markdown.remarkPlugins`
+and `rehypePlugins` were already the documented seam.
 
 ## Development workflow (issue → PR → Copilot review → merge)
 
@@ -176,12 +176,13 @@ To run the example site: `pnpm --filter @sigx-examples/mermaid-basic dev`
   one release train:
   - `.` — the `<Mermaid>` sigx component and the render primitives
   - `./client` — side-effect module that enhances ` ```mermaid ` fences
-  - `./ssg` — `rehypeMermaid`, the `@sigx/ssg` markdown plugin
+  - `./ssg` — `remarkMermaid` and `rehypeMermaid`, the markdown-pipeline plugins
   - `./styles` — the stylesheet (cosmetic only; nothing functional depends on it)
 
   `mermaid` and `sigx` are peers; the package has **no runtime dependencies**.
-  Keep it that way — the hast walk in `src/ssg.ts` is hand-rolled precisely so
-  `unist-util-visit` and `@types/hast` don't leak into consumers.
+  Keep it that way — the mdast/hast walks in `src/ssg.ts` are hand-rolled
+  precisely so `unist-util-visit`, `@types/mdast` and `@types/hast` don't leak
+  into consumers.
 
 ### Examples
 

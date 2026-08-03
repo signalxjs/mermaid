@@ -5,6 +5,60 @@ All notable changes to `@sigx/mermaid` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `remarkMermaid` on the `@sigx/mermaid/ssg` entry — a remark plugin that
+  claims ```` ```mermaid ```` fences on the markdown tree, before HTML
+  conversion, so nothing downstream of it ever sees the fence and no other
+  pipeline configuration is needed. Same options as `rehypeMermaid`
+  (`language`, `className`) and the identical emitted `<figure>` shell;
+  nothing changes for `@sigx/mermaid/client` or the stylesheet.
+
+  ```ts
+  // ssg.config.ts
+  import { remarkMermaid } from '@sigx/mermaid/ssg';
+
+  markdown: {
+      remarkPlugins: [remarkMermaid],
+  },
+  ```
+
+  `rehypeMermaid` is unchanged and remains available; it runs on the HTML tree
+  and claims whatever `<pre><code class="language-mermaid">` is still present
+  when it runs.
+
+### Changed
+
+- The figure shell's source block is now a bare
+  `<pre class="sigx-mermaid-source">` with no inner `<code>` — everywhere it is
+  emitted (`<Mermaid>`, `remarkMermaid`, `rehypeMermaid`). The shell must not
+  look like a markdown fence (`pre > code`), or fence tooling running later in
+  the same pipeline mistakes the embedded source for a code block and claims
+  it out of the figure. Styling hooks are unchanged (`.sigx-mermaid-source`);
+  only CSS targeting the removed inner `code` element needs updating.
+- `mermaidThemeContribution` now contributes `markdown.remarkPlugins` instead
+  of `markdown.rehypePlugins`, which makes it genuinely drop-in for a theme:
+  previously the rehype path additionally required site-level pipeline
+  configuration that a `ThemeConfig` cannot carry.
+- Documentation no longer references any specific syntax highlighter. Each
+  plugin documents its own contract; how a site's pipeline treats fences
+  before the HTML stage belongs to that pipeline's documentation.
+
+### Fixed
+
+- The documented Vite advice now tells the dependency optimizer to **include**
+  mermaid (`optimizeDeps.include: ['mermaid']`) instead of excluding it.
+  mermaid is imported lazily, so the dev server's dependency scanner never
+  discovers it, and un-optimized its CJS dependencies (dayjs) are served raw
+  and fail to load as ES modules — with the previous advice every diagram
+  errored under `vite dev` ([#14]). Verified against `@sigx/ssg` 0.20.0: the
+  example site renders diagrams under the dev server, through client-side
+  navigation, with the invalid-diagram fence degrading to visible source.
+
+[#14]: https://github.com/signalxjs/mermaid/issues/14
+
 ## [0.1.0] - 2026-07-31
 
 ### Added

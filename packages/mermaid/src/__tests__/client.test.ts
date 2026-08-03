@@ -67,7 +67,7 @@ const RealIntersectionObserver = globalThis.IntersectionObserver;
 
 const FIGURE = `
 <figure class="sigx-mermaid" data-sigx-mermaid>
-  <pre class="sigx-mermaid-source"><code>graph TD; A--&gt;B;</code></pre>
+  <pre class="sigx-mermaid-source">graph TD; A--&gt;B;</pre>
 </figure>`;
 
 const BARE_FENCE = `<pre><code class="language-mermaid">graph TD; A--&gt;B;</code></pre>`;
@@ -224,7 +224,7 @@ describe('installMermaid', () => {
         // Regression, caught in a real browser: sigx patches the DOM across a
         // client-side navigation rather than replacing it, so the outgoing
         // page's <figure> elements are re-used for the incoming page — same
-        // element objects, new text in the <code>. Keyed on element identity
+        // element objects, new text in the source <pre>. Keyed on element identity
         // alone the enhancer says "already claimed" and the previous page's
         // SVG sits above the new page's source.
         document.body.innerHTML = `<div id="app">${FIGURE}</div>`;
@@ -236,7 +236,7 @@ describe('installMermaid', () => {
         expect(figure.querySelector('svg')!.getAttribute('data-source')).toContain('graph TD');
 
         // The patch: same <figure>, same <pre>, different text.
-        figure.querySelector('.sigx-mermaid-source code')!.textContent = 'pie title Other';
+        figure.querySelector('.sigx-mermaid-source')!.textContent = 'pie title Other';
         await settle();
 
         expect(render).toHaveBeenCalledTimes(2);
@@ -251,9 +251,9 @@ describe('installMermaid', () => {
         await settle();
 
         const figure = document.querySelector<HTMLElement>('[data-sigx-mermaid]')!;
-        const code = figure.querySelector('.sigx-mermaid-source code')!;
+        const source = figure.querySelector('.sigx-mermaid-source')!;
         // A patch that rewrites the same text must not cost a re-render.
-        code.replaceChildren(document.createTextNode(code.textContent ?? ''));
+        source.replaceChildren(document.createTextNode(source.textContent ?? ''));
         await settle();
 
         expect(render).toHaveBeenCalledTimes(1);
