@@ -1,5 +1,5 @@
 import { defineSSGConfig } from '@sigx/ssg';
-import { rehypeMermaid } from '@sigx/mermaid/ssg';
+import { remarkMermaid } from '@sigx/mermaid/ssg';
 
 export default defineSSGConfig({
     site: {
@@ -9,14 +9,10 @@ export default defineSSGConfig({
     },
 
     markdown: {
-        // The two halves of the integration.
-        //
-        // `skipLanguages` is what makes this possible at all: shiki would
-        // otherwise claim the fence and replace it with highlighted markup,
-        // leaving nothing for the rehype plugin to find. Site rehype plugins
-        // run *after* shiki, so the ordering works out.
-        shiki: { skipLanguages: ['mermaid'] },
-        rehypePlugins: [rehypeMermaid],
+        // remarkMermaid claims ` ```mermaid ` fences on the markdown tree,
+        // before HTML conversion — nothing downstream of it ever sees the
+        // fence, so no other pipeline configuration is needed.
+        remarkPlugins: [remarkMermaid],
     },
 
     // The mermaid stylesheet is cosmetic; the client entry is what renders

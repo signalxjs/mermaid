@@ -16,8 +16,8 @@ for: the diagram source stays in the HTML, mermaid loads only on pages that have
 a diagram and only once one scrolls into view, and diagrams re-theme when the
 reader flips light/dark.
 
-`@sigx/ssg` needs no changes to support it. `markdown.shiki.skipLanguages` was
-already the documented seam for exactly this.
+`@sigx/ssg` needs no changes to support it — site markdown plugins were already
+the documented seam for exactly this.
 
 ## Quick start
 
@@ -28,12 +28,11 @@ pnpm add @sigx/mermaid mermaid
 ```ts
 // ssg.config.ts
 import { defineSSGConfig } from '@sigx/ssg';
-import { rehypeMermaid } from '@sigx/mermaid/ssg';
+import { remarkMermaid } from '@sigx/mermaid/ssg';
 
 export default defineSSGConfig({
     markdown: {
-        shiki: { skipLanguages: ['mermaid'] },
-        rehypePlugins: [rehypeMermaid],
+        remarkPlugins: [remarkMermaid],
     },
     clientImports: ['@sigx/mermaid/styles', '@sigx/mermaid/client'],
 });
@@ -74,7 +73,7 @@ mermaid/
 
 | Package | Description |
 | --- | --- |
-| [`@sigx/mermaid`](./packages/mermaid/README.md) | `<Mermaid>` component, client-side fence enhancement, and the `rehypeMermaid` plugin for `@sigx/ssg`. |
+| [`@sigx/mermaid`](./packages/mermaid/README.md) | `<Mermaid>` component, client-side fence enhancement, and the `remarkMermaid` / `rehypeMermaid` markdown plugins. |
 
 ## Development
 

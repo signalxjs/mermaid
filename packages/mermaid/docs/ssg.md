@@ -6,8 +6,7 @@ which apply here unchanged. This page covers only the extra wiring that turns
 ```` ```mermaid ```` fences in MDX into diagrams.
 
 `@sigx/ssg` has no knowledge of mermaid and does not depend on it. What it
-provides is a generic seam — `markdown.shiki.skipLanguages` hands a fence
-language to a downstream plugin, and site `rehypePlugins` run after shiki — and
+provides is a generic seam — site-supplied markdown plugins — and
 `@sigx/mermaid/ssg` plugs into it. Nothing in ssg needs to change to support
 diagrams.
 
@@ -16,21 +15,29 @@ diagrams.
 ```ts
 // ssg.config.ts
 import { defineSSGConfig } from '@sigx/ssg';
-import { rehypeMermaid } from '@sigx/mermaid/ssg';
+import { remarkMermaid } from '@sigx/mermaid/ssg';
 
 export default defineSSGConfig({
     markdown: {
-        // Both lines are required. `skipLanguages` stops shiki from claiming
-        // the fence; site rehype plugins run after shiki, so rehypeMermaid
-        // then finds the raw <pre><code class="language-mermaid">.
-        shiki: { skipLanguages: ['mermaid'] },
-        rehypePlugins: [rehypeMermaid],
+        remarkPlugins: [remarkMermaid],
     },
     clientImports: ['@sigx/mermaid/styles', '@sigx/mermaid/client'],
 });
 ```
 
-Every other language still goes through shiki as usual.
+That is the whole integration. `remarkMermaid` claims the fence on the
+markdown tree, before HTML conversion, so nothing downstream of it ever sees
+the fence — every other fence is untouched and rendered however the site
+normally renders code.
+
+`@sigx/mermaid/ssg` exports two plugins; they emit the identical figure shell
+and differ only in which stage of the pipeline hands them the tree:
+
+- **`remarkMermaid`** runs on the markdown tree (`markdown.remarkPlugins`). It
+  claims the fence before HTML conversion and needs nothing else.
+- **`rehypeMermaid`** runs on the HTML tree (`markdown.rehypePlugins`). It
+  claims whatever `<pre><code class="language-mermaid">` is still in the tree
+  when it runs — what reaches it is decided by the plugins ordered before it.
 
 If you call `configureMermaid()`, its module must come **before**
 `@sigx/mermaid/client` in `clientImports` — the client installs itself on
@@ -55,7 +62,7 @@ accessible name.
 
 ```html
 <figure class="sigx-mermaid" data-sigx-mermaid data-mermaid-title="Request flow">
-  <pre class="sigx-mermaid-source"><code>sequenceDiagram…</code></pre>
+  <pre class="sigx-mermaid-source">sequenceDiagram…</pre>
   <figcaption class="sigx-mermaid-caption">Request flow</figcaption>
 </figure>
 ```
@@ -77,13 +84,29 @@ open permanently. With no attribute, the source `<pre>` is simply visible, which
 is the correct no-JS presentation. Style the absent case with
 `.sigx-mermaid:not([data-mermaid-state])` if you need to.
 
-### Without the rehype plugin
+### Without a plugin
 
-The plugin is optional. `@sigx/mermaid/client` also claims a bare
-`pre > code.language-mermaid`, wrapping it in the same figure at runtime, so
-`skipLanguages` + `clientImports` alone is a working setup. What the plugin adds
-is the caption, a reserved box that stops the page jumping when the SVG lands,
-and markup that exists before JavaScript runs.
+The plugins are optional. `@sigx/mermaid/client` also claims a bare
+`pre > code.language-mermaid`, wrapping it in the same figure at runtime — a
+working setup whenever the fence reaches the HTML in that shape. What a plugin
+adds is the caption, a reserved box that stops the page jumping when the SVG
+lands, and markup that exists before JavaScript runs.
+
+### Contributing it from a theme
+
+`mermaidThemeContribution` is a drop-in fragment for an `@sigx/ssg` **theme** —
+spread it into the theme's `ThemeConfig` and every site using that theme gets
+diagrams with no site-level configuration:
+
+```ts
+import { mermaidThemeContribution } from '@sigx/mermaid/ssg';
+
+export const themeConfig = {
+    // …the theme's own config…
+    markdown: { ...mermaidThemeContribution.markdown },
+    css: [...mermaidThemeContribution.css],
+};
+```
 
 ## Caveats
 
@@ -98,13 +121,19 @@ import '@sigx/mermaid/styles';
 import '@sigx/mermaid/client';
 ```
 
-**2. mermaid is heavy to pre-bundle.** It pulls in d3, cytoscape and katex.
-Exclude it from Vite's dependency optimizer to keep dev-server cold start fast —
-it is dynamically imported either way, so it still gets its own chunk:
+**2. Tell Vite's dependency optimizer about mermaid.** mermaid is imported
+lazily, only once a diagram nears the viewport, so the dev server's dependency
+scanner never discovers it — and un-optimized, its CJS dependencies (dayjs
+among them) are served raw in dev and fail to load as ES modules. Name it
+explicitly:
 
 ```ts
 // vite.config.ts
 export default defineConfig({
-    optimizeDeps: { exclude: ['mermaid'] },
+    optimizeDeps: { include: ['mermaid'] },
 });
 ```
+
+If mermaid is not a direct dependency of your app, use
+`optimizeDeps.include: ['@sigx/mermaid > mermaid']`. Production builds are
+unaffected either way.

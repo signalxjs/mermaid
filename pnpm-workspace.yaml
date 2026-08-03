@@ -17,14 +17,6 @@ onlyBuiltDependencies:
 # lines and `pnpm sync:core` does not touch them, so bump them by hand to the
 # releases aligned with the same core minor as the entries above.
 #
-# NOTE: this repo is deliberately AHEAD of the released @sigx/ssg, which is an
-# examples-only dependency. @sigx/ssg@0.18.0 declares peers on core ^0.13.0 and
-# @sigx/router ^0.10.0; we resolve 0.14 and 0.11. That mismatch is intentional:
-# @sigx/mermaid itself peers only `sigx`, and core 0.14 is what provides
-# `Define.Attrs` / `mergeProps` — the host-attribute opt-in the component is
-# typed against. ssg's own main is already aligned to core 0.14, so the
-# declaration catches up when it releases; nothing here needs to change then.
-#
 # The invariant that must NOT regress is one physical copy of the runtime:
 # `pnpm why -r @sigx/reactivity` has to report exactly one version, or reactive
 # state silently splits. Verified after every change to this block.
@@ -33,4 +25,4 @@ catalog:
   '@sigx/vite': ^0.14.0
   '@sigx/server-renderer': ^0.14.0
   '@sigx/router': ^0.11.0
-  '@sigx/ssg': ^0.18.0
+  '@sigx/ssg': ^0.20.0

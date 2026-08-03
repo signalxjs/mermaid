@@ -137,8 +137,11 @@ export default component<MermaidProps>(({ props, signal, onMounted }) => {
     return () => {
         return (
             <figure {...figureProps}>
+                {/* A bare `<pre>`, matching the shell the ssg plugins emit —
+                    deliberately not `<pre><code>`, which pipeline tooling
+                    treats as a code block to claim. */}
                 <pre class="sigx-mermaid-source" hidden={Boolean(state.svg)}>
-                    <code>{props.code}</code>
+                    {props.code}
                 </pre>
                 {state.svg ? (
                     <div

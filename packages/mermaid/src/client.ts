@@ -8,8 +8,7 @@
  * ```
  *
  * The rules this follows are the ones `@sigx/ssg` enforces for every enhancer
- * (see `installCodeCopy` in `@sigx/ssg`'s client, and the comment above the
- * live-preview markup in its shiki transformer):
+ * (see `installCodeCopy` in `@sigx/ssg`'s client):
  *
  *  - **Never `render()` over or wipe the SSR subtree.** Rendering a framework
  *    tree on top of server markup is what caused duplicated widgets in
@@ -39,9 +38,9 @@ export interface MermaidClientOptions {
     rootMargin?: string;
 }
 
-/** Selector for shells emitted by `rehypeMermaid`. */
+/** Selector for shells emitted by `remarkMermaid` / `rehypeMermaid`. */
 const FIGURE_SELECTOR = '[data-sigx-mermaid]';
-/** Selector for bare fences — the no-rehype-plugin path. */
+/** Selector for bare fences — the no-plugin path. */
 const BARE_SELECTOR = 'pre > code.language-mermaid';
 
 /** Figures already claimed by an observer, so a re-scan never doubles up. */

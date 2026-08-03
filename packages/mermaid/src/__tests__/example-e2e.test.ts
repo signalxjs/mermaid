@@ -3,9 +3,9 @@
  * production pipeline and asserts on the emitted files.
  *
  * This is the only test that exercises the part unit tests cannot see — that
- * `markdown.shiki.skipLanguages` really does hand the fence to us, that the
- * plugin's output survives MDX compilation and SSR, and that mermaid stays out
- * of the entry chunk.
+ * the plugin's figure shell survives the real markdown pipeline, MDX
+ * compilation and SSR, that other fences come out untouched, and that mermaid
+ * stays out of the entry chunk.
  *
  * Requires `packages/mermaid/dist` (the example resolves `@sigx/mermaid`
  * through the workspace link's exports map). CI builds first; the suite skips

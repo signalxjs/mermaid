@@ -7,7 +7,8 @@
  *   primitives, for `.tsx` pages and plain sigx apps.
  * - `@sigx/mermaid/client` — side-effect module that enhances ` ```mermaid `
  *   fences on a statically-rendered page.
- * - `@sigx/mermaid/ssg` — `rehypeMermaid`, the `@sigx/ssg` markdown plugin.
+ * - `@sigx/mermaid/ssg` — `remarkMermaid` and `rehypeMermaid`, the
+ *   markdown-pipeline plugins.
  *
  * Plus `@sigx/mermaid/styles` for the stylesheet.
  */

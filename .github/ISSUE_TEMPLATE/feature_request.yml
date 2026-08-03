@@ -42,7 +42,7 @@ body:
       options:
         - "@sigx/mermaid (the <Mermaid> component)"
         - "@sigx/mermaid/client (fence enhancement)"
-        - "@sigx/mermaid/ssg (rehypeMermaid)"
+        - "@sigx/mermaid/ssg (markdown plugins)"
         - "@sigx/mermaid/styles"
         - Not sure
     validations:

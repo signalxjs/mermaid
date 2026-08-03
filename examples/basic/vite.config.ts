@@ -10,10 +10,11 @@ export default defineConfig({
             importSource: 'sigx',
         },
     },
-    // mermaid drags in d3, cytoscape and katex. Excluding it from dependency
-    // pre-bundling keeps the dev-server cold start fast; it is dynamically
-    // imported at runtime either way, so it still lands in its own chunk.
+    // mermaid is imported lazily at runtime, so Vite's dependency scanner
+    // never sees it — name it for the optimizer explicitly. Without this, dev
+    // serves mermaid's CJS dependencies raw (dayjs resolves to a UMD build
+    // with no ESM default) and every diagram fails to render in dev.
     optimizeDeps: {
-        exclude: ['mermaid'],
+        include: ['mermaid'],
     },
 });

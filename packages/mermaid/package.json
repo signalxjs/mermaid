@@ -42,6 +42,7 @@
         "diagram",
         "flowchart",
         "ssg",
+        "remark",
         "rehype"
     ],
     "author": "Andreas Ekdahl",

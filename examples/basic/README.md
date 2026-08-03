@@ -13,12 +13,11 @@ pnpm --filter @sigx-examples/mermaid-basic build:site
 What it covers:
 
 - `src/pages/index.mdx` — a flowchart with a `title=` caption, a sequence
-  diagram, and a `.ts` fence that shiki still owns
+  diagram, and a `.ts` fence the site's code rendering still owns
 - `src/pages/second.mdx` — a diagram reached by client-side navigation (the case
   the enhancer's `MutationObserver` exists for), plus an intentionally invalid
   diagram that must degrade to visible source
-- `ssg.config.ts` — the whole integration: `shiki.skipLanguages`,
-  `rehypePlugins`, `clientImports`
-- `vite.config.ts` — `optimizeDeps.exclude: ['mermaid']`
+- `ssg.config.ts` — the whole integration: `remarkPlugins`, `clientImports`
+- `vite.config.ts` — `optimizeDeps.include: ['mermaid']`
 
 If you change these pages, keep the e2e assertions in sync.
