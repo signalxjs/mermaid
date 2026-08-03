@@ -1,6 +1,6 @@
 {
     "name": "@sigx/mermaid",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Mermaid diagrams for sigx \u2014 a <Mermaid> component plus lazy, theme-aware progressive enhancement for @sigx/ssg code fences",
     "type": "module",
     "main": "./dist/index.js",
