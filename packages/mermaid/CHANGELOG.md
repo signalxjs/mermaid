@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Builds against sigx core **0.15** (signalxjs/core 0.15.1): the catalog moves
+  `sigx` / `@sigx/vite` / `@sigx/server-renderer` to `^0.15.0`, so the
+  published `sigx` peer range becomes `^0.15.0`. Sibling pins move with it —
+  `@sigx/router` `^0.12.0`, `@sigx/ssg` `^0.21.0` (examples-only
+  dependencies). No source change in the package itself; the example layout
+  adopts core 0.15's optional slot accessor (`slots.default?.()`).
+
 ## [0.2.0] - 2026-08-03
 
 ### Added

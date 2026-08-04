@@ -6,7 +6,7 @@ onlyBuiltDependencies:
   - esbuild
 
 # Single source of truth for the SignalX core version this repo builds against.
-# `^0.14.0` == `>=0.14.0 <0.15.0` (ONE minor).
+# `^0.15.0` == `>=0.15.0 <0.16.0` (ONE minor).
 # @sigx/reactivity keeps reactive state in module-local variables, so two physical
 # copies silently split core's singletons and break reactivity; the single-minor
 # range forces pnpm to hoist ONE copy. Bump this one block to move the whole repo
@@ -21,8 +21,8 @@ onlyBuiltDependencies:
 # `pnpm why -r @sigx/reactivity` has to report exactly one version, or reactive
 # state silently splits. Verified after every change to this block.
 catalog:
-  sigx: ^0.14.0
-  '@sigx/vite': ^0.14.0
-  '@sigx/server-renderer': ^0.14.0
-  '@sigx/router': ^0.11.0
-  '@sigx/ssg': ^0.20.0
+  sigx: ^0.15.0
+  '@sigx/vite': ^0.15.0
+  '@sigx/server-renderer': ^0.15.0
+  '@sigx/router': ^0.12.0
+  '@sigx/ssg': ^0.21.0
