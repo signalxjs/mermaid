@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-05
+
 ### Changed
 
 - Builds against sigx core **0.15** (signalxjs/core 0.15.1): the catalog moves
@@ -113,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sits at the bottom of the precedence chain, so any explicit value wins, and
   it is skipped entirely when the page paints no background.
 
-[Unreleased]: https://github.com/signalxjs/mermaid/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/signalxjs/mermaid/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/signalxjs/mermaid/releases/tag/v0.3.0
 [0.2.0]: https://github.com/signalxjs/mermaid/releases/tag/v0.2.0
 [0.1.0]: https://github.com/signalxjs/mermaid/releases/tag/v0.1.0
