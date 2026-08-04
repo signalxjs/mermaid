@@ -28,7 +28,7 @@ export default component<LayoutProps, unknown, LayoutSlots>(({ slots }) => {
                     <RouterLink to="/second/">Second page</RouterLink>
                 </nav>
             </header>
-            <main>{slots.default()}</main>
+            <main>{slots.default?.()}</main>
             <footer>Built with @sigx/ssg and @sigx/mermaid</footer>
         </div>
     );
