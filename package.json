@@ -38,12 +38,12 @@
     "devDependencies": {
         "@size-limit/preset-small-lib": "^11",
         "@typescript/native-preview": "7.0.0-dev.20260704.1",
-        "@vitest/coverage-v8": "^4.1.5",
+        "@vitest/coverage-v8": "^4.1.11",
         "happy-dom": "^20.10.6",
-        "oxlint": "^1.63.0",
+        "oxlint": "^1.79.0",
         "size-limit": "^11",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.5"
+        "vitest": "^4.1.11"
     },
     "keywords": [
         "sigx",
