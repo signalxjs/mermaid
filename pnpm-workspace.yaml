@@ -21,8 +21,8 @@ onlyBuiltDependencies:
 # `pnpm why -r @sigx/reactivity` has to report exactly one version, or reactive
 # state silently splits. Verified after every change to this block.
 catalog:
-  sigx: ^0.15.0
-  '@sigx/vite': ^0.15.0
-  '@sigx/server-renderer': ^0.15.0
+  sigx: ^0.15.6
+  '@sigx/vite': ^0.15.6
+  '@sigx/server-renderer': ^0.15.6
   '@sigx/router': ^0.12.0
   '@sigx/ssg': ^0.21.0
