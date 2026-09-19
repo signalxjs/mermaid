@@ -7,14 +7,14 @@ settings:
 catalogs:
   default:
     '@sigx/router':
-      specifier: ^0.12.0
-      version: 0.12.1
+      specifier: ^0.13.0
+      version: 0.13.0
     '@sigx/server-renderer':
       specifier: ^1.0.0
       version: 1.0.1
     '@sigx/ssg':
-      specifier: ^0.21.0
-      version: 0.21.0
+      specifier: ^0.22.0
+      version: 0.22.0
     '@sigx/vite':
       specifier: ^1.0.0
       version: 1.0.1
@@ -58,13 +58,13 @@ importers:
         version: link:../../packages/mermaid
       '@sigx/router':
         specifier: 'catalog:'
-        version: 0.12.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1)
+        version: 0.13.0(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1)
       '@sigx/server-renderer':
         specifier: 'catalog:'
         version: 1.0.1(sigx@1.0.1)
       '@sigx/ssg':
         specifier: 'catalog:'
-        version: 0.21.0(@sigx/router@0.12.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1))(@sigx/server-renderer@1.0.1(sigx@1.0.1))(rollup@4.62.3)(sigx@1.0.1)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+        version: 0.22.0(@sigx/router@0.13.0(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1))(@sigx/server-renderer@1.0.1(sigx@1.0.1))(rollup@4.62.3)(sigx@1.0.1)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
       mermaid:
         specifier: ^11.16.0
         version: 11.16.0
@@ -894,13 +894,13 @@ packages:
     resolution: {integrity: sha512-4ju3C2Et2ZIkZTtchoTeQKnlelcv0iNFbq1JF/cWt1Q0l15e1vau+eoy6Tx+Wnk9+Z1CPHYwJWDHhLNZrWMdqw==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
-  '@sigx/router@0.12.1':
-    resolution: {integrity: sha512-HP6NDkH6wz1HYeVhriqriG5k2G7HQmbmVXACrew3y1eFNgi788Ux/DdOxJSHQa/268dkatJonPTWcrXxSZOWpg==}
+  '@sigx/router@0.13.0':
+    resolution: {integrity: sha512-cy1SIibeA2mNdmDkBZogDO1TiHANe+oZFp2aJi/fit3IMAWt31jprzHDudsQ73p8hguLN63id0xfy2W17OyFkA==}
     peerDependencies:
-      '@sigx/reactivity': ^0.15.0
-      '@sigx/runtime-core': ^0.15.0
-      '@sigx/runtime-dom': ^0.15.0
-      sigx: ^0.15.0
+      '@sigx/reactivity': ^1.0.0
+      '@sigx/runtime-core': ^1.0.0
+      '@sigx/runtime-dom': ^1.0.0
+      sigx: ^1.0.0
 
   '@sigx/runtime-core@1.0.1':
     resolution: {integrity: sha512-T1xfzWrAmRzZBNZh6xy0aQoPqLOFbHjy27ZMCakmRsZT2VjENBSwbvvFVKNz6QTiaBS+L/dUVghXKGNau6vRIw==}
@@ -923,13 +923,13 @@ packages:
     peerDependencies:
       sigx: ^1.0.1
 
-  '@sigx/ssg@0.21.0':
-    resolution: {integrity: sha512-KzeqiIPab5hFgCUzMVWaEJWYE8Fat6lPjMEcD3YsnsPjih1nADbfwI+dY6DKOgGVS9snKagJwr7yeLJ0XNF0UQ==}
+  '@sigx/ssg@0.22.0':
+    resolution: {integrity: sha512-e8NeBG+2kUqtGSfpTgzmgpMWe5kGoqw10ZDEpteLlFv0sf2s3lERfhaa7B65Ka3sKrWljo1rRwCtN0e856A/Cw==}
     peerDependencies:
       '@sigx/cli': '>=0.4.0'
-      '@sigx/router': ^0.12.0
-      '@sigx/server-renderer': ^0.15.0
-      sigx: ^0.15.0
+      '@sigx/router': ^0.13.0
+      '@sigx/server-renderer': ^1.0.0
+      sigx: ^1.0.0
       vite: '>=8.0.0'
     peerDependenciesMeta:
       '@sigx/cli':
@@ -2963,7 +2963,7 @@ snapshots:
 
   '@sigx/reactivity@1.0.1': {}
 
-  '@sigx/router@0.12.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1)':
+  '@sigx/router@0.13.0(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1)':
     dependencies:
       '@sigx/reactivity': 1.0.1
       '@sigx/runtime-core': 1.0.1(@sigx/reactivity@1.0.1)
@@ -2987,10 +2987,10 @@ snapshots:
       '@sigx/serialize': 1.0.1
       sigx: 1.0.1
 
-  '@sigx/ssg@0.21.0(@sigx/router@0.12.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1))(@sigx/server-renderer@1.0.1(sigx@1.0.1))(rollup@4.62.3)(sigx@1.0.1)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
+  '@sigx/ssg@0.22.0(@sigx/router@0.13.0(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1))(@sigx/server-renderer@1.0.1(sigx@1.0.1))(rollup@4.62.3)(sigx@1.0.1)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
       '@mdx-js/rollup': 3.1.1(rollup@4.62.3)
-      '@sigx/router': 0.12.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1)
+      '@sigx/router': 0.13.0(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1))(@sigx/runtime-dom@1.0.1(@sigx/reactivity@1.0.1)(@sigx/runtime-core@1.0.1(@sigx/reactivity@1.0.1)))(sigx@1.0.1)
       '@sigx/server-renderer': 1.0.1(sigx@1.0.1)
       esbuild: 0.28.1
       fast-glob: 3.3.3
