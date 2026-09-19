@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-19
+
+### Changed
+
+- **SignalX core retargeted to 1.0; the package peers on `sigx` at `^1.0.0`**
+  (#29, #30, #31). The `catalog:` block moves from `^0.15.0` to `^1.0.0`, so
+  the published `peerDependencies.sigx` is `^1.0.0` — the app owns the
+  single copy of the runtime and any core 1.x satisfies (core rfc-1.0 §3).
+  Breaking for consumers still on core 0.15: upgrade core first. The
+  examples-only companions move to the releases built against core 1.0:
+  `@sigx/router` `^0.13.0`, `@sigx/ssg` `^0.22.0`. No source change; the
+  suite (78 tests, including the `examples/basic` e2e build) passes
+  unchanged, and the built example renders, re-themes and navigates under
+  core 1.0.1.
+
 ## [0.3.0] - 2026-08-05
 
 ### Changed
